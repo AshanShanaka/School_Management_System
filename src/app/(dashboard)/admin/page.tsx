@@ -1,5 +1,6 @@
 import Announcements from "@/components/Announcements";
 import AttendanceChartContainer from "@/components/AttendanceChartContainer";
+import AttendanceDashboardContainer from "@/components/AttendanceDashboardContainer";
 import CountChartContainer from "@/components/CountChartContainer";
 import EventCalendarContainer from "@/components/EventCalendarContainer";
 import FinanceChart from "@/components/PerformanceChart";
@@ -21,6 +22,10 @@ const AdminPage = ({
           <UserCard type="student" />
           <UserCard type="parent" />
         </div>
+
+        {/* ATTENDANCE DASHBOARD */}
+        <AttendanceDashboardContainer />
+
         {/* MIDDLE CHARTS */}
         <div className="flex gap-4 flex-col lg:flex-row">
           {/* COUNT CHART */}

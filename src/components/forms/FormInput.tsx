@@ -7,6 +7,7 @@ interface FormInputProps {
   register: UseFormRegister<any>;
   error?: { message?: string };
   hidden?: boolean;
+  className?: string;
 }
 
 export default function FormInput({
@@ -16,9 +17,12 @@ export default function FormInput({
   register,
   error,
   hidden = false,
+  className = "",
 }: FormInputProps) {
   return (
-    <div className={`flex flex-col gap-2 ${hidden ? "hidden" : ""}`}>
+    <div
+      className={`flex flex-col gap-2 ${className} ${hidden ? "hidden" : ""}`}
+    >
       <label className="text-sm text-gray-600">{label}</label>
       <input
         type={type}

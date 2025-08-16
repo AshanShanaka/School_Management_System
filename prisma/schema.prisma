@@ -21,7 +21,7 @@ model Student {
   phone       String?      @unique
   address     String
   img         String?
-  bloodType   String
+  bloodType   String?
   sex         UserSex
   createdAt   DateTime     @default(now())
   parentId    String
@@ -36,22 +36,24 @@ model Student {
 }
 
 model Teacher {
-  id        String    @id
-  username  String    @unique
-  name      String
-  surname   String
-  email     String?   @unique
-  phone     String?   @unique
-  address   String
-  img       String?
-  bloodType String
-  sex       UserSex
-  createdAt DateTime  @default(now())
-  subjects  Subject[]
-  lessons   Lesson[]
-  classes   Class[]
-  birthday  DateTime
-  Exam      Exam[]
+  id                 String              @id
+  username           String              @unique
+  name               String
+  surname            String
+  email              String?             @unique
+  phone              String?             @unique
+  address            String
+  img                String?
+  bloodType          String?
+  sex                UserSex
+  createdAt          DateTime            @default(now())
+  subjects           Subject[]
+  lessons            Lesson[]
+  classes            Class[]
+  birthday           DateTime
+  Exam               Exam[]
+  timetableSlots     TimetableSlot[]
+  subjectAssignments SubjectAssignment[]
 }
 
 model Parent {
@@ -62,6 +64,9 @@ model Parent {
   email     String?   @unique
   phone     String    @unique
   address   String
+  img       String?
+  sex       UserSex
+  birthday  DateTime
   createdAt DateTime  @default(now())
   students  Student[]
 }
@@ -79,22 +84,29 @@ model Class {
   name     String @unique
   capacity Int
 
-  supervisorId  String?
-  supervisor    Teacher?       @relation(fields: [supervisorId], references: [id])
-  lessons       Lesson[]
-  students      Student[]
-  gradeId       Int
-  grade         Grade          @relation(fields: [gradeId], references: [id])
-  events        Event[]
-  announcements Announcement[]
+  supervisorId       String?
+  supervisor         Teacher?            @relation(fields: [supervisorId], references: [id])
+  lessons            Lesson[]
+  students           Student[]
+  gradeId            Int
+  grade              Grade               @relation(fields: [gradeId], references: [id])
+  events             Event[]
+  announcements      Announcement[]
+  timetables         Timetable[]
+  specialDays        SpecialDay[]
+  subjectAssignments SubjectAssignment[]
 }
 
 model Subject {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
-  teachers Teacher[]
-  lessons  Lesson[]
-  Exam     Exam[]
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  code               String?             @unique // Subject code like "MATH101"
+  color              String? // Hex color for UI display
+  teachers           Teacher[]
+  lessons            Lesson[]
+  Exam               Exam[]
+  timetableSlots     TimetableSlot[]
+  subjectAssignments SubjectAssignment[]
 }
 
 model Lesson {
@@ -208,4 +220,80 @@ enum Day {
   WEDNESDAY
   THURSDAY
   FRIDAY
+}
+
+enum SpecialDayType {
+  POYA_DAY
+  PUBLIC_HOLIDAY
+  SCHOOL_EVENT
+  EXAMINATION
+  VACATION
+  SPORTS_DAY
+  CULTURAL_EVENT
+}
+
+model Timetable {
+  id           Int      @id @default(autoincrement())
+  name         String
+  academicYear String
+  isActive     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  classId Int
+  class   Class           @relation(fields: [classId], references: [id])
+  slots   TimetableSlot[]
+}
+
+model TimetableSlot {
+  id        Int     @id @default(autoincrement())
+  day       Day
+  period    Int // 1-10 periods (period 6 is break time 10:50-11:10)
+  startTime String // "08:30"
+  endTime   String // "09:20"
+  isBreak   Boolean @default(false)
+
+  timetableId Int
+  timetable   Timetable @relation(fields: [timetableId], references: [id])
+
+  // Subject assignment (can be null for free periods)
+  subjectId Int?
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+
+  // Teacher assignment (can be null for free periods)
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+
+  @@unique([timetableId, day, period])
+}
+
+model SpecialDay {
+  id          Int            @id @default(autoincrement())
+  date        DateTime
+  name        String
+  description String?
+  type        SpecialDayType
+  isRecurring Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+
+  // Optional: Link to specific classes if the special day only affects certain classes
+  classId Int?
+  class   Class? @relation(fields: [classId], references: [id])
+}
+
+model SubjectAssignment {
+  id Int @id @default(autoincrement())
+
+  subjectId Int
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([subjectId, teacherId, classId])
 }

@@ -8,7 +8,13 @@ import { Class, Lesson, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
-type LessonList = Lesson & { subject: Subject } & { class: Class } & {
+type LessonList = Lesson & { subject: Subject } & {
+  class: Class & {
+    grade: {
+      level: number;
+    };
+  };
+} & {
   teacher: Teacher;
 };
 
@@ -69,7 +75,9 @@ const LessonListPage = async ({
     >
       <td className="flex items-center gap-4 p-4">{item.name}</td>
       <td>{item.subject.name}</td>
-      <td>{item.class.name}</td>
+      <td>
+        {item.class.grade.level}-{item.class.name}
+      </td>
       <td>{item.day}</td>
       <td className="hidden md:table-cell">
         {item.startTime.toLocaleTimeString("en-US", {
@@ -138,7 +146,12 @@ const LessonListPage = async ({
       where: query,
       include: {
         subject: { select: { name: true } },
-        class: { select: { name: true } },
+        class: {
+          select: {
+            name: true,
+            grade: { select: { level: true } },
+          },
+        },
         teacher: { select: { name: true, surname: true } },
       },
       take: ITEM_PER_PAGE,

@@ -1,3 +1,4 @@
+import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
@@ -6,12 +7,6 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Exam, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
-import dynamic from "next/dynamic";
-import { toast } from "react-toastify";
-
-const ClientFormModal = dynamic(() => import("@/components/FormModal"), {
-  ssr: false,
-});
 
 type ExamList = Exam & {
   Subject: Subject;
@@ -32,12 +27,8 @@ const ExamListPage = async ({
 
   const columns = [
     {
-      header: "Exam Name",
+      header: "Title",
       accessor: "title",
-    },
-    {
-      header: "Type",
-      accessor: "type",
     },
     {
       header: "Subject",
@@ -46,16 +37,19 @@ const ExamListPage = async ({
     {
       header: "Supervisor",
       accessor: "teacher",
+    },
+    {
+      header: "Type",
+      accessor: "type",
+    },
+    {
+      header: "Start Time",
+      accessor: "startTime",
       className: "hidden md:table-cell",
     },
     {
-      header: "Date & Time",
-      accessor: "date",
-      className: "hidden md:table-cell",
-    },
-    {
-      header: "Duration",
-      accessor: "duration",
+      header: "End Time",
+      accessor: "endTime",
       className: "hidden md:table-cell",
     },
     {
@@ -63,10 +57,14 @@ const ExamListPage = async ({
       accessor: "venue",
       className: "hidden md:table-cell",
     },
-    {
-      header: "Actions",
-      accessor: "action",
-    },
+    ...(role === "admin" || role === "teacher"
+      ? [
+          {
+            header: "Actions",
+            accessor: "action",
+          },
+        ]
+      : []),
   ];
 
   const renderRow = (item: ExamList) => (
@@ -75,9 +73,11 @@ const ExamListPage = async ({
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="flex items-center gap-4 p-4">{item.title}</td>
-      <td>{item.examType.name}</td>
       <td>{item.Subject?.name || "N/A"}</td>
-      <td>{item.Teacher?.name || "N/A"}</td>
+      <td>
+        {item.Teacher ? `${item.Teacher.name} ${item.Teacher.surname}` : "N/A"}
+      </td>
+      <td>{item.examType.name}</td>
       <td className="hidden md:table-cell">
         {new Intl.DateTimeFormat("en-US", {
           dateStyle: "medium",
@@ -95,8 +95,8 @@ const ExamListPage = async ({
         <div className="flex items-center gap-2">
           {(role === "admin" || role === "teacher") && (
             <>
-              <ClientFormModal table="exam" type="update" data={item} />
-              <ClientFormModal table="exam" type="delete" id={item.id} />
+              <FormContainer table="exam" type="update" data={item} />
+              <FormContainer table="exam" type="delete" id={item.id} />
             </>
           )}
         </div>
@@ -177,7 +177,7 @@ const ExamListPage = async ({
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
             {(role === "admin" || role === "teacher") && (
-              <ClientFormModal table="exam" type="create" />
+              <FormContainer table="exam" type="create" />
             )}
           </div>
         </div>

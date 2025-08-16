@@ -1,22 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Day } from "@prisma/client";
 import {
   ClassSchema,
   ExamSchema,
   StudentSchema,
   SubjectSchema,
   TeacherSchema,
-  ParentSchema,
-  AssignmentSchema,
-  LessonSchema,
+  GradeSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
-import { auth } from "@clerk/nextjs/server";
-import { Prisma } from "@prisma/client";
 
-export type CurrentState = { success: boolean; error: boolean | string };
+export type CurrentState = { success: boolean; error: boolean };
 
 export const createSubject = async (
   currentState: CurrentState,
@@ -165,7 +162,6 @@ export const createTeacher = async (
         phone: data.phone || null,
         address: data.address,
         img: data.img || null,
-        bloodType: data.bloodType,
         sex: data.sex,
         birthday: data.birthday,
         subjects: {
@@ -212,7 +208,6 @@ export const updateTeacher = async (
         phone: data.phone || null,
         address: data.address,
         img: data.img || null,
-        bloodType: data.bloodType,
         sex: data.sex,
         birthday: data.birthday,
         subjects: {
@@ -236,18 +231,44 @@ export const deleteTeacher = async (
 ) => {
   const id = data.get("id") as string;
   try {
-    await clerkClient.users.deleteUser(id);
+    console.log("Attempting to delete teacher with ID:", id);
 
+    // First check if the teacher exists in the database
+    const teacher = await prisma.teacher.findUnique({
+      where: { id },
+    });
+
+    if (!teacher) {
+      console.log("Teacher not found in database, checking Clerk...");
+      // Try to delete the Clerk user if it exists
+      try {
+        await clerkClient.users.deleteUser(id);
+      } catch (clerkErr) {
+        console.log("Clerk user may not exist:", clerkErr);
+      }
+      return { success: true, error: false };
+    }
+
+    // Delete from Clerk first
+    try {
+      await clerkClient.users.deleteUser(id);
+      console.log("Successfully deleted user from Clerk");
+    } catch (clerkErr) {
+      console.log("Error deleting from Clerk (continuing anyway):", clerkErr);
+      // Continue with database deletion even if Clerk deletion fails
+    }
+
+    // Delete from database
     await prisma.teacher.delete({
       where: {
         id: id,
       },
     });
 
-    // revalidatePath("/list/teachers");
+    console.log("Successfully deleted teacher from database");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error("Error deleting teacher:", err);
     return { success: false, error: true };
   }
 };
@@ -285,7 +306,6 @@ export const createStudent = async (
         phone: data.phone || null,
         address: data.address,
         img: data.img || null,
-        bloodType: data.bloodType,
         sex: data.sex,
         birthday: data.birthday,
         gradeId: data.gradeId,
@@ -330,7 +350,6 @@ export const updateStudent = async (
         phone: data.phone || null,
         address: data.address,
         img: data.img || null,
-        bloodType: data.bloodType,
         sex: data.sex,
         birthday: data.birthday,
         gradeId: data.gradeId,
@@ -352,18 +371,44 @@ export const deleteStudent = async (
 ) => {
   const id = data.get("id") as string;
   try {
-    await clerkClient.users.deleteUser(id);
+    console.log("Attempting to delete student with ID:", id);
 
+    // First check if the student exists in the database
+    const student = await prisma.student.findUnique({
+      where: { id },
+    });
+
+    if (!student) {
+      console.log("Student not found in database, checking Clerk...");
+      // Try to delete the Clerk user if it exists
+      try {
+        await clerkClient.users.deleteUser(id);
+      } catch (clerkErr) {
+        console.log("Clerk user may not exist:", clerkErr);
+      }
+      return { success: true, error: false };
+    }
+
+    // Delete from Clerk first
+    try {
+      await clerkClient.users.deleteUser(id);
+      console.log("Successfully deleted user from Clerk");
+    } catch (clerkErr) {
+      console.log("Error deleting from Clerk (continuing anyway):", clerkErr);
+      // Continue with database deletion even if Clerk deletion fails
+    }
+
+    // Delete from database
     await prisma.student.delete({
       where: {
         id: id,
       },
     });
 
-    // revalidatePath("/list/students");
+    console.log("Successfully deleted student from database");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error("Error deleting student:", err);
     return { success: false, error: true };
   }
 };
@@ -372,63 +417,25 @@ export const createExam = async (
   currentState: CurrentState,
   data: ExamSchema
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can create exams" };
-  }
-
   try {
-    // Verify that the teacher is assigned to this subject
-    const subject = await prisma.subject.findFirst({
-      where: {
-        id: data.subjectId,
-        teachers: {
-          some: {
-            id: userId,
-          },
-        },
-      },
-    });
-
-    if (!subject) {
-      return {
-        success: false,
-        error: "Not authorized to create exam for this subject",
-      };
-    }
-
-    const startDateTime = new Date(`${data.examDate}T${data.startTime}`);
-    const endDateTime = new Date(`${data.examDate}T${data.endTime}`);
-    const duration = Math.round(
-      (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60)
-    ).toString();
+    const startDateTime = new Date(`${data.startDate}T${data.startTime}`);
+    const endDateTime = new Date(`${data.endDate}T${data.endTime}`);
 
     await prisma.exam.create({
       data: {
         title: data.title,
+        examTypeId: data.examTypeId,
+        subjectId: data.subjectId,
+        teacherId: data.teacherId,
         startTime: startDateTime,
         endTime: endDateTime,
-        duration,
+        duration: data.duration,
         venue: data.venue,
-        examType: {
-          connect: { id: data.examTypeId },
-        },
-        Subject: {
-          connect: { id: data.subjectId },
-        },
-        Teacher: {
-          connect: data.teacherId ? { id: data.teacherId } : undefined,
-        },
+        day: data.day,
+        subjectCode: data.subjectCode,
       },
     });
 
-    revalidatePath("/list/exams");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -440,48 +447,9 @@ export const updateExam = async (
   currentState: CurrentState,
   data: ExamSchema
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can update exams" };
-  }
-
-  if (!data.id) {
-    return { success: false, error: true };
-  }
-
   try {
-    // Verify that the teacher is assigned to this exam
-    const exam = await prisma.exam.findFirst({
-      where: {
-        id: data.id,
-        Subject: {
-          teachers: {
-            some: {
-              id: userId,
-            },
-          },
-        },
-      },
-    });
-
-    if (!exam) {
-      return {
-        success: false,
-        error: "Not authorized to update this exam",
-      };
-    }
-
-    const startDateTime = new Date(`${data.examDate}T${data.startTime}`);
-    const endDateTime = new Date(`${data.examDate}T${data.endTime}`);
-    const duration = Math.round(
-      (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60)
-    ).toString();
+    const startDateTime = new Date(`${data.startDate}T${data.startTime}`);
+    const endDateTime = new Date(`${data.endDate}T${data.endTime}`);
 
     await prisma.exam.update({
       where: {
@@ -489,23 +457,18 @@ export const updateExam = async (
       },
       data: {
         title: data.title,
+        examTypeId: data.examTypeId,
+        subjectId: data.subjectId,
+        teacherId: data.teacherId,
         startTime: startDateTime,
         endTime: endDateTime,
-        duration,
+        duration: data.duration,
         venue: data.venue,
-        examType: {
-          connect: { id: data.examTypeId },
-        },
-        Subject: {
-          connect: { id: data.subjectId },
-        },
-        Teacher: {
-          connect: data.teacherId ? { id: data.teacherId } : undefined,
-        },
+        day: data.day,
+        subjectCode: data.subjectCode,
       },
     });
 
-    revalidatePath("/list/exams");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -515,48 +478,16 @@ export const updateExam = async (
 
 export const deleteExam = async (
   currentState: CurrentState,
-  id: string // Changed parameter type to string
+  data: FormData
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can delete exams" };
-  }
-
+  const id = data.get("id") as string;
   try {
-    // Verify that the teacher is assigned to this exam
-    const exam = await prisma.exam.findFirst({
-      where: {
-        id: parseInt(id),
-        Subject: {
-          teachers: {
-            some: {
-              id: userId,
-            },
-          },
-        },
-      },
-    });
-
-    if (!exam) {
-      return {
-        success: false,
-        error: "Not authorized to delete this exam",
-      };
-    }
-
     await prisma.exam.delete({
       where: {
         id: parseInt(id),
       },
     });
 
-    revalidatePath("/list/exams");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -564,100 +495,139 @@ export const deleteExam = async (
   }
 };
 
-export const createParent = async (
-  currentState: CurrentState,
-  data: ParentSchema
-) => {
-  try {
-    const user = await clerkClient.users.createUser({
-      username: data.username,
-      password: data.password,
-      firstName: data.name,
-      lastName: data.surname,
-      publicMetadata: { role: "parent" },
-    });
-
-    await prisma.parent.create({
-      data: {
-        id: user.id,
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone,
-        address: data.address,
-      },
-    });
-
-    return { success: true, error: false };
-  } catch (err) {
-    console.log(err);
-    // Handle Clerk's password breach error specifically
-    if ((err as any).errors?.[0]?.code === "form_password_pwned") {
-      return {
-        success: false,
-        error: true,
-        message:
-          "This password has been found in a data breach. Please choose a different password for security.",
-      };
-    }
-    return {
-      success: false,
-      error: true,
-      message:
-        ((err as any).errors?.[0]?.message as string) || "Something went wrong",
-    };
-  }
-};
-
-export const updateParent = async (
-  currentState: CurrentState,
-  data: ParentSchema
-) => {
-  if (!data.id) return { success: false, error: true };
-
-  try {
-    await clerkClient.users.updateUser(data.id, {
-      username: data.username,
-      ...(data.password !== "" && { password: data.password }),
-      firstName: data.name,
-      lastName: data.surname,
-    });
-
-    await prisma.parent.update({
-      where: {
-        id: data.id,
-      },
-      data: {
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone,
-        address: data.address,
-      },
-    });
-
-    return { success: true, error: false };
-  } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
-  }
-};
 export const deleteParent = async (
   currentState: CurrentState,
   data: FormData
 ) => {
   const id = data.get("id") as string;
-
   try {
-    // First, delete the user from Clerk
-    await clerkClient.users.deleteUser(id);
+    // First check if the parent has any associated students
+    const parent = await prisma.parent.findUnique({
+      where: { id },
+      include: { students: true },
+    });
 
-    // Then, delete the parent from the database
+    // If parent doesn't exist, consider it already deleted
+    if (!parent) {
+      // Try to delete the Clerk user if it exists
+      try {
+        await clerkClient.users.deleteUser(id);
+      } catch (clerkErr) {
+        // Ignore errors if Clerk user doesn't exist
+        console.log("Clerk user may not exist:", clerkErr);
+      }
+      return {
+        success: true,
+        error: false,
+        message: "Parent already deleted or doesn't exist",
+      };
+    }
+
+    // Check if parent has students
+    if (parent.students.length > 0) {
+      return {
+        success: false,
+        error: true,
+        message:
+          "Cannot delete parent with associated students. Please reassign or remove the students first.",
+      };
+    }
+
+    // No students associated, proceed with deletion
+    try {
+      await clerkClient.users.deleteUser(id);
+    } catch (clerkErr) {
+      console.log("Could not delete Clerk user:", clerkErr);
+      // Continue with database deletion even if Clerk deletion fails
+    }
+
     await prisma.parent.delete({
+      where: { id },
+    });
+
+    revalidatePath("/list/parents");
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    // Handle specific Prisma error for record not found
+    if ((err as any).code === "P2025") {
+      return { success: true, error: false, message: "Parent already deleted" };
+    }
+    return {
+      success: false,
+      error: true,
+      message:
+        "Failed to delete parent: " + ((err as any).message || "Unknown error"),
+    };
+  }
+};
+
+export const createLesson = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  try {
+    const { name, day, startTime, endTime, subjectId, classId, teacherId } =
+      Object.fromEntries(data);
+
+    await prisma.lesson.create({
+      data: {
+        name: name as string,
+        day: day as Day,
+        startTime: new Date(`1970-01-01T${startTime}:00`),
+        endTime: new Date(`1970-01-01T${endTime}:00`),
+        subjectId: parseInt(subjectId as string),
+        classId: parseInt(classId as string),
+        teacherId: teacherId as string,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateLesson = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  try {
+    const { id, name, day, startTime, endTime, subjectId, classId, teacherId } =
+      Object.fromEntries(data);
+
+    await prisma.lesson.update({
       where: {
-        id: id, // Ensure this is the correct ID for the parent
+        id: parseInt(id as string),
+      },
+      data: {
+        name: name as string,
+        day: day as Day,
+        startTime: new Date(`1970-01-01T${startTime}:00`),
+        endTime: new Date(`1970-01-01T${endTime}:00`),
+        subjectId: parseInt(subjectId as string),
+        classId: parseInt(classId as string),
+        teacherId: teacherId as string,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteLesson = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+  try {
+    await prisma.lesson.delete({
+      where: {
+        id: parseInt(id),
       },
     });
 
@@ -670,45 +640,20 @@ export const deleteParent = async (
 
 export const createAssignment = async (
   currentState: CurrentState,
-  data: AssignmentSchema
+  data: FormData
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can create assignments" };
-  }
-
   try {
-    // Verify that the teacher is assigned to this lesson
-    const lesson = await prisma.lesson.findFirst({
-      where: {
-        id: data.lessonId,
-        teacherId: userId,
-      },
-    });
-
-    if (!lesson) {
-      return {
-        success: false,
-        error: "Not authorized to create assignment for this lesson",
-      };
-    }
+    const { title, startDate, dueDate, lessonId } = Object.fromEntries(data);
 
     await prisma.assignment.create({
       data: {
-        title: data.title,
-        startDate: data.startDate,
-        dueDate: data.dueDate,
-        lessonId: data.lessonId,
+        title: title as string,
+        startDate: new Date(startDate as string),
+        dueDate: new Date(dueDate as string),
+        lessonId: parseInt(lessonId as string),
       },
     });
 
-    revalidatePath("/list/assignments");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -718,54 +663,24 @@ export const createAssignment = async (
 
 export const updateAssignment = async (
   currentState: CurrentState,
-  data: AssignmentSchema
+  data: FormData
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can update assignments" };
-  }
-
-  if (!data.id) {
-    return { success: false, error: true };
-  }
-
   try {
-    // Verify that the teacher is assigned to this lesson
-    const assignment = await prisma.assignment.findFirst({
-      where: {
-        id: data.id,
-        lesson: {
-          teacherId: userId,
-        },
-      },
-    });
-
-    if (!assignment) {
-      return {
-        success: false,
-        error: "Not authorized to update this assignment",
-      };
-    }
+    const { id, title, startDate, dueDate, lessonId } =
+      Object.fromEntries(data);
 
     await prisma.assignment.update({
       where: {
-        id: data.id,
+        id: parseInt(id as string),
       },
       data: {
-        title: data.title,
-        startDate: data.startDate,
-        dueDate: data.dueDate,
-        lessonId: data.lessonId,
+        title: title as string,
+        startDate: new Date(startDate as string),
+        dueDate: new Date(dueDate as string),
+        lessonId: parseInt(lessonId as string),
       },
     });
 
-    revalidatePath("/list/assignments");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -777,43 +692,14 @@ export const deleteAssignment = async (
   currentState: CurrentState,
   data: FormData
 ) => {
-  const { userId, sessionClaims } = auth();
   const id = data.get("id") as string;
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can delete assignments" };
-  }
-
   try {
-    // Verify that the teacher is assigned to this lesson
-    const assignment = await prisma.assignment.findFirst({
-      where: {
-        id: parseInt(id),
-        lesson: {
-          teacherId: userId,
-        },
-      },
-    });
-
-    if (!assignment) {
-      return {
-        success: false,
-        error: "Not authorized to delete this assignment",
-      };
-    }
-
     await prisma.assignment.delete({
       where: {
         id: parseInt(id),
       },
     });
 
-    revalidatePath("/list/assignments");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -821,184 +707,324 @@ export const deleteAssignment = async (
   }
 };
 
-export const createLesson = async (
+export const createGrade = async (
   currentState: CurrentState,
-  data: LessonSchema
+  data: GradeSchema
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    console.error("No user ID found");
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    console.error("User is not a teacher");
-    return { success: false, error: "Only teachers can create lessons" };
-  }
-
   try {
-    console.log("Creating lesson with data:", data);
-
-    // Verify that the teacher is assigned to this subject
-    const subject = await prisma.subject.findFirst({
-      where: {
-        id: data.subjectId,
-        teachers: {
-          some: {
-            id: userId,
-          },
-        },
-      },
+    await prisma.grade.create({
+      data,
     });
-
-    if (!subject) {
-      console.error("Teacher not assigned to subject");
-      return { success: false, error: "You are not assigned to this subject" };
-    }
-
-    // Create the lesson
-    const lesson = await prisma.lesson.create({
-      data: {
-        name: data.name,
-        day: data.day,
-        startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
-        subjectId: data.subjectId,
-        classId: data.classId,
-        teacherId: userId,
-      },
-    });
-
-    console.log("Lesson created successfully:", lesson);
-    revalidatePath("/list/lessons");
     return { success: true, error: false };
   } catch (err) {
-    console.error("Error creating lesson:", err);
-    return {
-      success: false,
-      error: "Failed to create lesson. Please try again.",
-    };
+    console.log(err);
+    return { success: false, error: true };
   }
 };
 
-export const updateLesson = async (
+export const updateGrade = async (
   currentState: CurrentState,
-  data: LessonSchema
+  data: GradeSchema
 ) => {
-  const { userId, sessionClaims } = auth();
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can update lessons" };
-  }
-
-  if (!data.id) {
-    return { success: false, error: "Lesson ID is required for update" };
-  }
-
   try {
-    // Verify that the teacher is assigned to this lesson
-    const lesson = await prisma.lesson.findFirst({
-      where: {
-        id: data.id,
-        teacherId: userId,
-      },
+    await prisma.grade.update({
+      where: { id: data.id },
+      data,
     });
-
-    if (!lesson) {
-      return { success: false, error: "Not authorized to update this lesson" };
-    }
-
-    // Verify that the teacher is assigned to the new subject
-    const subject = await prisma.subject.findFirst({
-      where: {
-        id: data.subjectId,
-        teachers: {
-          some: {
-            id: userId,
-          },
-        },
-      },
-    });
-
-    if (!subject) {
-      return { success: false, error: "You are not assigned to this subject" };
-    }
-
-    await prisma.lesson.update({
-      where: {
-        id: data.id,
-      },
-      data: {
-        name: data.name,
-        day: data.day,
-        startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
-        subjectId: data.subjectId,
-        classId: data.classId,
-        teacherId: userId,
-      },
-    });
-
-    revalidatePath("/list/lessons");
     return { success: true, error: false };
   } catch (err) {
-    console.error("Error updating lesson:", err);
-    return {
-      success: false,
-      error: "Failed to update lesson. Please try again.",
-    };
+    console.log(err);
+    return { success: false, error: true };
   }
 };
 
-export const deleteLesson = async (
+export const deleteGrade = async (
   currentState: CurrentState,
   data: FormData
 ) => {
-  const { userId, sessionClaims } = auth();
   const id = data.get("id") as string;
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated" };
+  try {
+    await prisma.grade.delete({
+      where: { id: parseInt(id) },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
   }
+};
 
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  if (role !== "teacher") {
-    return { success: false, error: "Only teachers can delete lessons" };
+export const createParent = async (currentState: CurrentState, data: any) => {
+  try {
+    // Check for required fields
+    if (!data.username || !data.password || !data.name || !data.surname) {
+      return {
+        success: false,
+        error: true,
+        message:
+          "Missing required fields. Please fill in all required information.",
+      };
+    }
+
+    // Check if username already exists in Prisma before creating in Clerk
+    const existingParent = await prisma.parent.findUnique({
+      where: { username: data.username },
+    });
+
+    if (existingParent) {
+      return {
+        success: false,
+        error: true,
+        message: "Username already exists. Please choose a different username.",
+      };
+    }
+
+    let clerkUser;
+    try {
+      // Create user in Clerk first - don't destructure to maintain the proper context
+      clerkUser = await clerkClient.users.createUser({
+        username: data.username,
+        password: data.password,
+        firstName: data.name,
+        lastName: data.surname,
+        publicMetadata: { role: "parent" },
+      });
+    } catch (clerkError: any) {
+      // Handle specific Clerk errors
+      if (clerkError.status === 422) {
+        return {
+          success: false,
+          error: true,
+          message:
+            "Username already exists in authentication system. Please choose a different username.",
+        };
+      }
+      throw clerkError; // Re-throw to be caught by the outer catch
+    }
+
+    // If Clerk user creation was successful, create the database record
+    try {
+      await prisma.parent.create({
+        data: {
+          id: clerkUser.id,
+          username: data.username,
+          name: data.name,
+          surname: data.surname,
+          email: data.email || null,
+          phone: data.phone || null,
+          address: data.address,
+          sex: data.sex,
+          birthday: data.birthday,
+          // img field will be omitted if it doesn't exist in the schema
+        },
+      });
+    } catch (prismaError: any) {
+      // If database creation fails, clean up by deleting the Clerk user
+      try {
+        await clerkClient.users.deleteUser(clerkUser.id);
+      } catch (deleteError) {
+        console.log(
+          "Failed to clean up Clerk user after database error:",
+          deleteError
+        );
+      }
+
+      // Handle specific Prisma errors
+      if (prismaError.code === "P2002") {
+        const field = prismaError.meta?.target?.[0] || "field";
+        return {
+          success: false,
+          error: true,
+          message: `A parent with this ${field} already exists. Please use a different value.`,
+        };
+      }
+
+      throw prismaError; // Re-throw to be caught by the outer catch
+    }
+
+    revalidatePath("/list/parents");
+    return {
+      success: true,
+      error: false,
+      message: "Parent created successfully!",
+    };
+  } catch (err: any) {
+    console.log(err);
+    return {
+      success: false,
+      error: true,
+      message: `Failed to create parent: ${err.message || "Unknown error"}`,
+    };
+  }
+};
+
+export const updateParent = async (currentState: CurrentState, data: any) => {
+  if (!data.id) {
+    return { success: false, error: true, message: "No parent ID provided" };
   }
 
   try {
-    // Verify that the teacher is assigned to this lesson
-    const lesson = await prisma.lesson.findFirst({
-      where: {
-        id: parseInt(id),
-        teacherId: userId,
-      },
+    // Check if the parent exists in the database
+    const existingParent = await prisma.parent.findUnique({
+      where: { id: data.id },
     });
 
-    if (!lesson) {
-      return { success: false, error: "Not authorized to delete this lesson" };
+    if (!existingParent) {
+      return {
+        success: false,
+        error: true,
+        message: "Parent not found. The record may have been deleted.",
+      };
     }
 
-    await prisma.lesson.delete({
+    // Check if the username change would conflict with existing users
+    if (data.username !== existingParent.username) {
+      const usernameCheck = await prisma.parent.findUnique({
+        where: { username: data.username },
+      });
+
+      if (usernameCheck && usernameCheck.id !== data.id) {
+        return {
+          success: false,
+          error: true,
+          message:
+            "Username already exists. Please choose a different username.",
+        };
+      }
+    }
+
+    // Update the Clerk user
+    try {
+      // Call the updateUser method directly without destructuring
+      await clerkClient.users.updateUser(data.id, {
+        username: data.username,
+        firstName: data.name,
+        lastName: data.surname,
+        ...(data.password &&
+          data.password !== "" && { password: data.password }),
+      });
+    } catch (clerkError: any) {
+      // Handle Clerk-specific errors
+      if (clerkError.status === 422) {
+        return {
+          success: false,
+          error: true,
+          message:
+            "Username already exists in authentication system. Please choose a different username.",
+        };
+      }
+      throw clerkError; // Re-throw to be caught by the outer catch
+    }
+
+    // Update the database record
+    try {
+      await prisma.parent.update({
+        where: { id: data.id },
+        data: {
+          username: data.username,
+          name: data.name,
+          surname: data.surname,
+          email: data.email || null,
+          phone: data.phone || null,
+          address: data.address,
+          sex: data.sex,
+          birthday: data.birthday,
+        },
+      });
+    } catch (prismaError: any) {
+      // Handle specific Prisma errors
+      if (prismaError.code === "P2002") {
+        const field = prismaError.meta?.target?.[0] || "field";
+        return {
+          success: false,
+          error: true,
+          message: `A parent with this ${field} already exists. Please use a different value.`,
+        };
+      }
+      throw prismaError; // Re-throw to be caught by the outer catch
+    }
+
+    revalidatePath("/list/parents");
+    return {
+      success: true,
+      error: false,
+      message: "Parent updated successfully!",
+    };
+  } catch (err: any) {
+    console.log(err);
+    return {
+      success: false,
+      error: true,
+      message: `Failed to update parent: ${err.message || "Unknown error"}`,
+    };
+  }
+};
+
+// TIMETABLE ACTIONS
+
+export const createTimetable = async (
+  currentState: CurrentState,
+  data: any
+) => {
+  try {
+    await prisma.timetable.create({
+      data: {
+        name: data.name,
+        academicYear: data.academicYear,
+        classId: parseInt(data.classId),
+        isActive: data.isActive || false,
+      },
+    });
+
+    revalidatePath("/list/timetables");
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateTimetable = async (
+  currentState: CurrentState,
+  data: any
+) => {
+  try {
+    await prisma.timetable.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        name: data.name,
+        academicYear: data.academicYear,
+        classId: parseInt(data.classId),
+        isActive: data.isActive || false,
+      },
+    });
+
+    revalidatePath("/list/timetables");
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteTimetable = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+  try {
+    await prisma.timetable.delete({
       where: {
         id: parseInt(id),
       },
     });
 
-    revalidatePath("/list/lessons");
+    revalidatePath("/list/timetables");
     return { success: true, error: false };
   } catch (err) {
-    console.error("Error deleting lesson:", err);
-    return {
-      success: false,
-      error: "Failed to delete lesson. Please try again.",
-    };
+    console.log(err);
+    return { success: false, error: true };
   }
 };

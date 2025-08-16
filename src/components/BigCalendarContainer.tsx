@@ -17,12 +17,16 @@ const BigCalendarContainer = async ({
     },
     include: {
       subject: true,
-      class: true,
+      class: {
+        include: {
+          grade: true,
+        },
+      },
     },
   });
 
   const data = dataRes.map((lesson) => ({
-    title: `${lesson.name} (${lesson.subject.name} - ${lesson.class.name})`,
+    title: `${lesson.name} (${lesson.subject.name} - ${lesson.class.grade.level}-${lesson.class.name})`,
     start: new Date(lesson.startTime),
     end: new Date(lesson.endTime),
   }));

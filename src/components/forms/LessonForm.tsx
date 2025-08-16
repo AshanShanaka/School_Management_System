@@ -60,7 +60,14 @@ const LessonForm = ({
 
   const onSubmit = handleSubmit((formData) => {
     console.log("Submitting lesson data:", formData);
-    formAction(formData);
+    // Create FormData object from the parsed data
+    const form = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        form.append(key, value.toString());
+      }
+    });
+    formAction(form);
   });
 
   const router = useRouter();

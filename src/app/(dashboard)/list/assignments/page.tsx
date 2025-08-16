@@ -15,7 +15,11 @@ const ClientFormModal = dynamic(() => import("@/components/FormModal"), {
 type AssignmentList = Assignment & {
   lesson: {
     subject: Subject;
-    class: Class;
+    class: Class & {
+      grade: {
+        level: number;
+      };
+    };
     teacher: Teacher;
   };
 };
@@ -66,7 +70,9 @@ const AssignmentListPage = async ({
       <td className="flex items-center gap-4 p-4">
         {item.lesson.subject.name}
       </td>
-      <td>{item.lesson.class.name}</td>
+      <td>
+        {item.lesson.class.grade.level}-{item.lesson.class.name}
+      </td>
       <td className="hidden md:table-cell">
         {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
       </td>
@@ -156,7 +162,12 @@ const AssignmentListPage = async ({
           select: {
             subject: { select: { name: true } },
             teacher: { select: { name: true, surname: true } },
-            class: { select: { name: true } },
+            class: {
+              select: {
+                name: true,
+                grade: { select: { level: true } },
+              },
+            },
           },
         },
       },

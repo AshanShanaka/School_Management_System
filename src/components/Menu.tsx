@@ -38,6 +38,12 @@ const menuItems = [
       },
       {
         icon: "/class.png",
+        label: "Grades",
+        href: "/list/grades",
+        visible: ["admin"],
+      },
+      {
+        icon: "/class.png",
         label: "Classes",
         href: "/list/classes",
         visible: ["admin", "teacher"],
@@ -47,6 +53,12 @@ const menuItems = [
         label: "Lessons",
         href: "/list/lessons",
         visible: ["admin", "teacher"],
+      },
+      {
+        icon: "/calendar.png",
+        label: "Timetables",
+        href: "/list/timetables",
+        visible: ["admin", "teacher", "student", "parent"],
       },
       {
         icon: "/exam.png",
@@ -89,6 +101,29 @@ const menuItems = [
         label: "Announcements",
         href: "/list/announcements",
         visible: ["admin", "teacher", "student", "parent"],
+      },
+    ],
+  },
+  {
+    title: "ADMIN TOOLS",
+    items: [
+      {
+        icon: "/upload.png",
+        label: "CSV Import",
+        href: "/admin/import",
+        visible: ["admin"],
+      },
+      {
+        icon: "/attendance.png",
+        label: "Take Attendance",
+        href: "/admin/attendance/take",
+        visible: ["admin"],
+      },
+      {
+        icon: "/calendar.png",
+        label: "Create Timetable",
+        href: "/admin/timetable/create",
+        visible: ["admin"],
       },
     ],
   },

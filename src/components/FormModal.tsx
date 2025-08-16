@@ -9,6 +9,8 @@ import {
   deleteTeacher,
   deleteLesson,
   deleteAssignment,
+  deleteGrade,
+  deleteTimetable,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -37,10 +39,12 @@ const deleteActionMap = {
   parent: deleteParent,
   lesson: deleteLesson,
   assignment: deleteAssignment,
+  grade: deleteGrade,
   result: deleteSubject,
   attendance: deleteSubject,
   event: deleteSubject,
   announcement: deleteSubject,
+  timetable: deleteTimetable,
 };
 
 // USE LAZY LOADING
@@ -73,6 +77,14 @@ const AssignmentForm = dynamic(() => import("./forms/AssignmentForm"), {
 });
 
 const LessonForm = dynamic(() => import("./forms/LessonForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
+const GradeForm = dynamic(() => import("./forms/GradeForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
+const TimetableForm = dynamic(() => import("./forms/TimetableForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -167,172 +179,25 @@ const forms: {
       relatedData={relatedData}
     />
   ),
-  teachers: (setOpen: any, type: string, data: any, relatedData: any) => {
-    const [formData, setFormData] = useState({
-      name: data?.name || "",
-      email: data?.email || "",
-      phone: data?.phone || "",
-      subject: data?.subject || "",
-      qualification: data?.qualification || "",
-      experience: data?.experience || "",
-      joiningDate: data?.joiningDate || "",
-      address: data?.address || "",
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      try {
-        if (type === "create") {
-          // Handle teacher creation
-          await createTeacher(formData);
-        } else if (type === "update") {
-          // Handle teacher update
-          await updateTeacher(data.id, formData);
-        }
-        setOpen(false);
-      } catch (error) {
-        console.error("Error saving teacher:", error);
-      }
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Name
-          </label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) =>
-              setFormData({ ...formData, phone: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Subject
-          </label>
-          <input
-            type="text"
-            value={formData.subject}
-            onChange={(e) =>
-              setFormData({ ...formData, subject: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Qualification
-          </label>
-          <input
-            type="text"
-            value={formData.qualification}
-            onChange={(e) =>
-              setFormData({ ...formData, qualification: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Experience (years)
-          </label>
-          <input
-            type="number"
-            value={formData.experience}
-            onChange={(e) =>
-              setFormData({ ...formData, experience: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Joining Date
-          </label>
-          <input
-            type="date"
-            value={formData.joiningDate}
-            onChange={(e) =>
-              setFormData({ ...formData, joiningDate: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Address
-          </label>
-          <textarea
-            value={formData.address}
-            onChange={(e) =>
-              setFormData({ ...formData, address: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            rows={3}
-            required
-          />
-        </div>
-
-        <div className="flex justify-end space-x-3">
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
-          >
-            {type === "create" ? "Add Teacher" : "Update Teacher"}
-          </button>
-        </div>
-      </form>
-    );
-  },
+  grade: (setOpen, type, data) => (
+    <GradeForm type={type} data={data} setOpen={setOpen} />
+  ),
+  timetable: (setOpen, type, data, relatedData) => (
+    <TimetableForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  teachers: (setOpen, type, data, relatedData) => (
+    <TeacherForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
 const FormModal = ({
@@ -352,7 +217,10 @@ const FormModal = ({
       : "bg-lamaPurple";
 
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useFormState(deleteActionMap[table], {
+  const [state, formAction] = useFormState<
+    { success: boolean; error: boolean },
+    FormData
+  >((state, formData) => deleteActionMap[table](state, formData), {
     success: false,
     error: false,
   });

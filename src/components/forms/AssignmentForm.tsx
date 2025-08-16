@@ -34,10 +34,7 @@ const AssignmentForm = ({
   });
 
   const [state, formAction] = useFormState(
-    (state: CurrentState, formData: AssignmentSchema) =>
-      type === "create"
-        ? createAssignment(state, formData)
-        : updateAssignment(state, formData),
+    type === "create" ? createAssignment : updateAssignment,
     {
       success: false,
       error: false,
@@ -45,7 +42,18 @@ const AssignmentForm = ({
   );
 
   const onSubmit = handleSubmit((formData) => {
-    formAction(formData);
+    // Create FormData object from the parsed data
+    const form = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (value instanceof Date) {
+          form.append(key, value.toISOString());
+        } else {
+          form.append(key, value.toString());
+        }
+      }
+    });
+    formAction(form);
   });
 
   const router = useRouter();
