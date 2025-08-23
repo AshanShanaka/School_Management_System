@@ -1,31 +1,26 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { routeAccessMap } from "./lib/settings";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-const matchers = Object.keys(routeAccessMap).map(route => ({
-  matcher: createRouteMatcher([route]),
-  allowedRoles: routeAccessMap[route]
-}));
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
 
-console.log(matchers);
-
-export default clerkMiddleware((auth, req) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-
-  // If no role, redirect to sign-in except for sign-in page
-  if (!role && !req.url.includes('/sign-in')) {
-    return NextResponse.redirect(new URL('/sign-in', req.url));
+  // Skip middleware for API routes and static files
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
   }
 
-  for (const { matcher, allowedRoles } of matchers) {
-    if (matcher(req) && !allowedRoles.includes(role!)) {
-      return NextResponse.redirect(new URL(`/${role}`, req.url));
-    }
+  // Redirect root to login
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-});
 
-// Configure Clerk middleware
+  return NextResponse.next();
+}
+
 export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)", "/"],
 };

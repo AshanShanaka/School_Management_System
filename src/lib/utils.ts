@@ -1,12 +1,5 @@
-import { auth, getAuth } from "@clerk/nextjs/server";
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-// Create functions to get auth data instead of variables
-//export const getUserId = () => {
-//  const { userId } = auth();
-//  return userId;
-//};
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export const currentWorkWeek = () => {
   const today = new Date();
@@ -47,5 +40,5 @@ export const adjustScheduleToCurrentWeek = (
 };
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }

@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 
 type SubjectList = Subject & { teachers: Teacher[] };
 
@@ -15,8 +15,8 @@ const SubjectListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const user = await getCurrentUser();
+  const role = user?.role;
 
   const columns = [
     {
@@ -39,9 +39,30 @@ const SubjectListPage = async ({
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
-      <td className="flex items-center gap-4 p-4">{item.name}</td>
+      <td className="flex items-center gap-4 p-4">
+        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+          <Image src="/subject.png" alt="" width={20} height={20} />
+        </div>
+        <div className="flex flex-col">
+          <h3 className="font-semibold">{item.name}</h3>
+          <p className="text-xs text-gray-500">Code: {item.code || "N/A"}</p>
+        </div>
+      </td>
       <td className="hidden md:table-cell">
-        {item.teachers.map((teacher) => teacher.name).join(",")}
+        <div className="flex flex-wrap gap-1">
+          {item.teachers.length > 0 ? (
+            item.teachers.map((teacher) => (
+              <span
+                key={teacher.id}
+                className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs"
+              >
+                {teacher.name} {teacher.surname}
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-400 italic">No teachers assigned</span>
+          )}
+        </div>
       </td>
       <td>
         <div className="flex items-center gap-2">

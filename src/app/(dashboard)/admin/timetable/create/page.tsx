@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,8 +10,8 @@ const AdminTimetableCreatePage = async ({
 }: {
   searchParams: { classId?: string };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const user = await getCurrentUser();
+  const role = user?.role;
 
   if (role !== "admin") {
     return notFound();

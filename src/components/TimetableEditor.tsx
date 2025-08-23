@@ -103,7 +103,7 @@ const TimetableEditor = ({
 
   const saveTimetable = async () => {
     try {
-      const response = await fetch(`/api/timetables/${timetableId}/slots`, {
+      const response = await fetch(`/api/timetables/management/${timetableId}/slots`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slots }),

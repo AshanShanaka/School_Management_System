@@ -153,142 +153,137 @@ export const lessonSchema = z.object({
 
 export type LessonSchema = z.infer<typeof lessonSchema>;
 
-// Excel Import Schemas
-export const excelStudentParentSchema = z
-  .object({
-    student_email: z
-      .string()
-      .email({ message: "Invalid student email address!" })
-      .transform((val) => val.trim().toLowerCase()),
-    student_password: z
-      .string()
-      .min(8, {
-        message: "Student password must be at least 8 characters long!",
-      })
-      .max(128, { message: "Student password too long!" }),
-    student_first_name: z
-      .string()
-      .min(1, { message: "Student first name is required!" })
-      .max(50, { message: "Student first name too long!" })
-      .transform((val) => val.trim()),
-    student_last_name: z
-      .string()
-      .min(1, { message: "Student last name is required!" })
-      .max(50, { message: "Student last name too long!" })
-      .transform((val) => val.trim()),
-    student_phone: z.string().optional(),
-    student_birthday: z
-      .string()
-      .min(1, { message: "Student birthday is required!" })
-      .refine(
-        (val) => {
-          const date = new Date(val);
-          return !isNaN(date.getTime()) && date < new Date();
-        },
-        { message: "Invalid student birthday format or future date!" }
-      ),
-    student_class: z
-      .string()
-      .min(1, { message: "Student class is required!" })
-      .max(20, { message: "Student class name too long!" }),
-    student_grade: z
-      .string()
-      .min(1, { message: "Student grade is required!" })
-      .refine(
-        (val) => {
-          const grade = parseInt(val);
-          return !isNaN(grade) && grade >= 1 && grade <= 12;
-        },
-        { message: "Student grade must be between 1 and 12!" }
-      ),
-    student_sex: z.enum(["MALE", "FEMALE"], {
-      message: "Student sex must be MALE or FEMALE!",
+// Excel Import Schemas - Handle Excel numeric values properly
+export const excelStudentParentSchema = z.object({
+  student_email: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim().toLowerCase())
+    .refine((val) => val.includes("@"), {
+      message: "Student email must contain @",
     }),
-    address: z
-      .string()
-      .min(1, { message: "Address is required!" })
-      .max(200, { message: "Address too long!" }),
-    parent_email: z
-      .string()
-      .email({ message: "Invalid parent email address!" })
-      .transform((val) => val.trim().toLowerCase()),
-    parent_password: z
-      .string()
-      .min(8, {
-        message: "Parent password must be at least 8 characters long!",
-      })
-      .max(128, { message: "Parent password too long!" }),
-    parent_first_name: z
-      .string()
-      .min(1, { message: "Parent first name is required!" })
-      .max(50, { message: "Parent first name too long!" })
-      .transform((val) => val.trim()),
-    parent_last_name: z
-      .string()
-      .min(1, { message: "Parent last name is required!" })
-      .max(50, { message: "Parent last name too long!" })
-      .transform((val) => val.trim()),
-    parent_phone: z
-      .string()
-      .min(1, { message: "Parent phone is required!" })
-      .max(20, { message: "Parent phone too long!" }),
-    parent_birthday: z
-      .string()
-      .min(1, { message: "Parent birthday is required!" })
-      .refine(
-        (val) => {
-          const date = new Date(val);
-          return !isNaN(date.getTime()) && date < new Date();
-        },
-        { message: "Invalid parent birthday format or future date!" }
-      ),
-    parent_sex: z.enum(["MALE", "FEMALE"], {
-      message: "Parent sex must be MALE or FEMALE!",
+  student_password: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  student_first_name: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  student_last_name: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  student_phone: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val))
+    .optional(),
+  student_birthday: z
+    .union([z.string(), z.number(), z.date()])
+    .transform((val) => {
+      if (val instanceof Date) return val.toISOString().split("T")[0];
+      if (typeof val === "number") {
+        // Excel serial date conversion
+        const date = new Date((val - 25569) * 86400 * 1000);
+        return date.toISOString().split("T")[0];
+      }
+      return String(val);
     }),
-  })
-  .refine((data) => data.student_email !== data.parent_email, {
-    message: "Student and parent must have different email addresses!",
-    path: ["parent_email"],
-  });
+  student_class: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  student_grade: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val)),
+  student_sex: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).toUpperCase())
+    .refine((val) => ["MALE", "FEMALE", "M", "F"].includes(val), {
+      message: "Student sex must be MALE/M or FEMALE/F!",
+    })
+    .transform((val) => (val === "M" ? "MALE" : val === "F" ? "FEMALE" : val)),
+  address: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  parent_email: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim().toLowerCase())
+    .refine((val) => val.includes("@"), {
+      message: "Parent email must contain @",
+    }),
+  parent_password: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  parent_first_name: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  parent_last_name: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  parent_phone: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val)),
+  parent_birthday: z
+    .union([z.string(), z.number(), z.date()])
+    .transform((val) => {
+      if (val instanceof Date) return val.toISOString().split("T")[0];
+      if (typeof val === "number") {
+        // Excel serial date conversion
+        const date = new Date((val - 25569) * 86400 * 1000);
+        return date.toISOString().split("T")[0];
+      }
+      return String(val);
+    }),
+  parent_sex: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).toUpperCase())
+    .refine((val) => ["MALE", "FEMALE", "M", "F"].includes(val), {
+      message: "Parent sex must be MALE/M or FEMALE/F!",
+    })
+    .transform((val) => (val === "M" ? "MALE" : val === "F" ? "FEMALE" : val)),
+});
 
 export const excelTeacherSchema = z.object({
   teacher_email: z
-    .string()
-    .email({ message: "Invalid teacher email address!" })
-    .transform((val) => val.trim().toLowerCase()),
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim().toLowerCase())
+    .refine((val) => val.includes("@"), {
+      message: "Teacher email must contain @",
+    }),
   teacher_password: z
-    .string()
-    .min(8, { message: "Teacher password must be at least 8 characters long!" })
-    .max(128, { message: "Teacher password too long!" }),
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
   teacher_first_name: z
-    .string()
-    .min(1, { message: "Teacher first name is required!" })
-    .max(50, { message: "Teacher first name too long!" })
-    .transform((val) => val.trim()),
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
   teacher_last_name: z
-    .string()
-    .min(1, { message: "Teacher last name is required!" })
-    .max(50, { message: "Teacher last name too long!" })
-    .transform((val) => val.trim()),
-  teacher_phone: z.string().optional(),
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  teacher_phone: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val))
+    .optional(),
   teacher_birthday: z
-    .string()
-    .min(1, { message: "Teacher birthday is required!" })
-    .refine(
-      (val) => {
-        const date = new Date(val);
-        return !isNaN(date.getTime()) && date < new Date();
-      },
-      { message: "Invalid teacher birthday format or future date!" }
-    ),
-  teacher_sex: z.enum(["MALE", "FEMALE"], {
-    message: "Teacher sex must be MALE or FEMALE!",
-  }),
+    .union([z.string(), z.number(), z.date()])
+    .transform((val) => {
+      if (val instanceof Date) return val.toISOString().split("T")[0];
+      if (typeof val === "number") {
+        // Excel serial date conversion
+        const date = new Date((val - 25569) * 86400 * 1000);
+        return date.toISOString().split("T")[0];
+      }
+      return String(val);
+    }),
+  teacher_sex: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).toUpperCase())
+    .refine((val) => ["MALE", "FEMALE", "M", "F"].includes(val), {
+      message: "Teacher sex must be MALE/M or FEMALE/F!",
+    })
+    .transform((val) => (val === "M" ? "MALE" : val === "F" ? "FEMALE" : val)),
   address: z
-    .string()
-    .min(1, { message: "Address is required!" })
-    .max(200, { message: "Address too long!" }),
-  subjects: z.string().optional(), // Comma-separated subject names
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim()),
+  subjects: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val))
+    .optional(), // Comma-separated subject names
 });
 
 export type ExcelStudentParentSchema = z.infer<typeof excelStudentParentSchema>;

@@ -1,183 +1,333 @@
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
 
 const menuItems = [
   {
-    title: "MENU",
+    title: "MAIN",
     items: [
       {
         icon: "/home.png",
-        label: "Home",
+        label: "Dashboard",
         href: "/",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
       },
+    ],
+  },
+  {
+    title: "MANAGEMENT",
+    items: [
       {
         icon: "/teacher.png",
         label: "Teachers",
         href: "/list/teachers",
         visible: ["admin", "teacher"],
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
       },
       {
         icon: "/student.png",
         label: "Students",
         href: "/list/students",
         visible: ["admin", "teacher"],
+        color: "text-green-600",
+        bgColor: "bg-green-50",
       },
       {
         icon: "/parent.png",
         label: "Parents",
         href: "/list/parents",
         visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/subject.png",
-        label: "Subjects",
-        href: "/list/subjects",
-        visible: ["admin"],
-      },
-      {
-        icon: "/class.png",
-        label: "Grades",
-        href: "/list/grades",
-        visible: ["admin"],
+        color: "text-orange-600",
+        bgColor: "bg-orange-50",
       },
       {
         icon: "/class.png",
         label: "Classes",
         href: "/list/classes",
         visible: ["admin", "teacher"],
+        color: "text-indigo-600",
+        bgColor: "bg-indigo-50",
+      },
+    ],
+  },
+  {
+    title: "ACADEMIC",
+    items: [
+      {
+        icon: "/subject.png",
+        label: "Subjects",
+        href: "/list/subjects",
+        visible: ["admin"],
+        color: "text-cyan-600",
+        bgColor: "bg-cyan-50",
+      },
+      {
+        icon: "/class.png",
+        label: "Grades",
+        href: "/list/grades",
+        visible: ["admin"],
+        color: "text-violet-600",
+        bgColor: "bg-violet-50",
       },
       {
         icon: "/lesson.png",
         label: "Lessons",
         href: "/list/lessons",
         visible: ["admin", "teacher"],
+        color: "text-rose-600",
+        bgColor: "bg-rose-50",
       },
       {
         icon: "/calendar.png",
-        label: "Timetables",
-        href: "/list/timetables",
+        label: "Timetable",
+        href: "/timetables",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-50",
       },
+    ],
+  },
+  {
+    title: "ACTIVITIES",
+    items: [
       {
         icon: "/exam.png",
         label: "Exams",
         href: "/list/exams",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-red-600",
+        bgColor: "bg-red-50",
       },
       {
         icon: "/assignment.png",
         label: "Assignments",
         href: "/list/assignments",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-amber-600",
+        bgColor: "bg-amber-50",
       },
       {
         icon: "/result.png",
         label: "Results",
         href: "/list/results",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-teal-600",
+        bgColor: "bg-teal-50",
       },
       {
         icon: "/attendance.png",
         label: "Attendance",
-        href: "/list/attendance",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/calendar.png",
-        label: "Events",
-        href: "/list/events",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/message.png",
-        label: "Messages",
-        href: "/list/messages",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/announcement.png",
-        label: "Announcements",
-        href: "/list/announcements",
-        visible: ["admin", "teacher", "student", "parent"],
+        href: "/admin/attendance",
+        visible: ["admin", "teacher"],
+        color: "text-pink-600",
+        bgColor: "bg-pink-50",
       },
     ],
   },
   {
-    title: "ADMIN TOOLS",
+    title: "TOOLS",
     items: [
       {
         icon: "/upload.png",
         label: "CSV Import",
         href: "/admin/import",
         visible: ["admin"],
-      },
-      {
-        icon: "/attendance.png",
-        label: "Take Attendance",
-        href: "/admin/attendance/take",
-        visible: ["admin"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
       },
       {
         icon: "/calendar.png",
-        label: "Create Timetable",
-        href: "/admin/timetable/create",
-        visible: ["admin"],
+        label: "Events",
+        href: "/list/events",
+        visible: ["admin", "teacher", "student", "parent"],
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+      },
+      {
+        icon: "/message.png",
+        label: "Messages",
+        href: "/list/messages",
+        visible: ["admin", "teacher", "student", "parent"],
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+      },
+      {
+        icon: "/announcement.png",
+        label: "Announcements",
+        href: "/list/announcements",
+        visible: ["admin", "teacher", "student", "parent"],
+        color: "text-orange-600",
+        bgColor: "bg-orange-50",
       },
     ],
   },
   {
-    title: "OTHER",
+    title: "SETTINGS",
     items: [
       {
         icon: "/profile.png",
         label: "Profile",
         href: "/profile",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-gray-600",
+        bgColor: "bg-gray-50",
       },
       {
         icon: "/setting.png",
         label: "Settings",
         href: "/settings",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-slate-600",
+        bgColor: "bg-slate-50",
       },
       {
         icon: "/logout.png",
         label: "Logout",
         href: "/logout",
         visible: ["admin", "teacher", "student", "parent"],
+        color: "text-red-600",
+        bgColor: "bg-red-50",
       },
     ],
   },
 ];
 
 const Menu = async () => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role || "";
+  const user = await getCurrentUser();
+  const role = user?.role || "";
+
+  // Debug: Log user information
+  console.log("Menu component - User:", user);
+  console.log("Menu component - Role:", role);
+
+  // Create role-specific dashboard href
+  const getDashboardHref = (userRole: string) => {
+    switch (userRole) {
+      case "admin":
+        return "/admin";
+      case "teacher":
+        return "/teacher";
+      case "student":
+        return "/student";
+      case "parent":
+        return "/parent";
+      default:
+        return "/";
+    }
+  };
+
+  // Create role-specific menu items with dynamic dashboard link
+  const getMenuItems = (userRole: string) => {
+    const dashboardHref = getDashboardHref(userRole);
+    
+    return menuItems.map((section) => {
+      if (section.title === "MAIN") {
+        return {
+          ...section,
+          items: section.items.map((item) => {
+            if (item.label === "Dashboard") {
+              return {
+                ...item,
+                href: dashboardHref,
+              };
+            }
+            return item;
+          }),
+        };
+      }
+      return section;
+    });
+  };
+
+  // Create role-specific menu items
+  const getAttendanceHref = (userRole: string) => {
+    switch (userRole) {
+      case "admin":
+        return "/admin/attendance";
+      case "teacher":
+        return "/teacher/attendance/timetable";
+      case "student":
+        return "/student/attendance";
+      case "parent":
+        return "/parent/attendance";
+      default:
+        return "/";
+    }
+  };
+
+  // Update menu items with dynamic attendance link and dashboard link
+  const dynamicMenuItems = getMenuItems(role).map((section) => {
+    if (section.title === "ACTIVITIES") {
+      return {
+        ...section,
+        items: section.items.map((item) => {
+          if (item.label === "Attendance") {
+            return {
+              ...item,
+              href: getAttendanceHref(role),
+            };
+          }
+          return item;
+        }),
+      };
+    }
+    return section;
+  });
 
   return (
-    <div className="mt-4 text-sm">
-      {menuItems.map((i) => (
-        <div className="flex flex-col gap-2" key={i.title}>
-          <span className="hidden lg:block text-gray-400 font-light my-4">
-            {i.title}
-          </span>
-          {i.items.map((item) => {
-            if (!role || item.visible.includes(role)) {
-              return (
-                <Link
-                  href={item.href}
-                  key={item.label}
-                  className="flex items-center justify-center lg:justify-start gap-4 text-gray-500 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight"
-                >
-                  <Image src={item.icon} alt="" width={20} height={20} />
-                  <span className="hidden lg:block">{item.label}</span>
-                </Link>
-              );
-            }
-            return null;
-          })}
+    <div className="mt-6 space-y-8">
+      {dynamicMenuItems.map((section) => (
+        <div key={section.title} className="space-y-3">
+          <div className="px-4">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:block">
+              {section.title}
+            </h3>
+          </div>
+          <div className="space-y-1">
+            {section.items?.map((item) => {
+              if (!role || item.visible.includes(role)) {
+                return (
+                  <Link
+                    href={item.href}
+                    key={item.label}
+                    className="group flex items-center justify-center lg:justify-start gap-3 px-4 py-3 mx-2 rounded-xl transition-all duration-200 hover:shadow-sm relative overflow-hidden"
+                  >
+                    {/* Background with gradient effect */}
+                    <div
+                      className={`absolute inset-0 ${item.bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl`}
+                    ></div>
+
+                    {/* Icon container with color styling */}
+                    <div
+                      className={`relative z-10 w-9 h-9 rounded-lg ${item.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}
+                    >
+                      <Image
+                        src={item.icon}
+                        alt=""
+                        width={18}
+                        height={18}
+                        className="filter group-hover:brightness-110"
+                      />
+                    </div>
+
+                    {/* Label with modern typography */}
+                    <span
+                      className={`relative z-10 hidden lg:block font-medium text-gray-700 group-hover:${item.color} group-hover:translate-x-1 transition-all duration-200`}
+                    >
+                      {item.label}
+                    </span>
+
+                    {/* Hover indicator */}
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </Link>
+                );
+              }
+              return null;
+            })}
+          </div>
         </div>
       ))}
     </div>

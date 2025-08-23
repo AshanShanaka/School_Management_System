@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { Day } from "@prisma/client";
@@ -19,8 +19,8 @@ function getDayFromDate(date: Date): Day | null {
 }
 
 export async function POST(request: NextRequest) {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const user = await getCurrentUser();
+  const role = user?.role;
 
   if (!role || (role !== "admin" && role !== "teacher")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

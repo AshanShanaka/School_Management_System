@@ -1,6 +1,7 @@
 "use client";
 
 import { TIMETABLE_CONFIG } from "@/lib/timetableConfig";
+import { formatClassDisplay } from "@/lib/formatters";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -69,8 +70,8 @@ const TimetableCreationForm = ({
   return (
     <div className="bg-white p-6 rounded-md">
       <h2 className="text-xl font-semibold mb-4">
-        Step 2: Create Timetable for Grade {selectedClass.grade.level} -{" "}
-        {selectedClass.name}
+        Step 2: Create Timetable for{" "}
+        {formatClassDisplay(selectedClass.name, selectedClass.grade.level)}
       </h2>
 
       <form
@@ -90,7 +91,10 @@ const TimetableCreationForm = ({
               type="text"
               name="name"
               required
-              placeholder={`Grade ${selectedClass.grade.level}-${selectedClass.name} Timetable`}
+              placeholder={`${formatClassDisplay(
+                selectedClass.name,
+                selectedClass.grade.level
+              )} Timetable`}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-lamaPurple focus:border-transparent"
             />
           </div>

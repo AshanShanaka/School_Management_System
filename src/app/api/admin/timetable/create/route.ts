@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import { TIMETABLE_CONFIG } from "@/lib/timetableConfig";
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionClaims } = auth();
-    const role = (sessionClaims?.metadata as { role?: string })?.role;
+    const user = await getCurrentUser();
+    const role = user?.role;
 
     if (role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

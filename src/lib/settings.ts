@@ -15,10 +15,13 @@ export const routeAccessMap: RouteAccessMap = {
   "/list/subjects": ["admin"],
   "/list/classes": ["admin", "teacher"],
   "/list/grades": ["admin"],
+  "/list/lessons": ["admin", "teacher"],
+  "/list/timetables": ["admin", "teacher", "student", "parent"],
   "/list/exams": ["admin", "teacher", "student", "parent"],
   "/list/assignments": ["admin", "teacher", "student", "parent"],
   "/list/results": ["admin", "teacher", "student", "parent"],
   "/list/attendance": ["admin", "teacher", "student", "parent"],
   "/list/events": ["admin", "teacher", "student", "parent"],
   "/list/announcements": ["admin", "teacher", "student", "parent"],
+  "/list/messages": ["admin", "teacher", "student", "parent"],
 };

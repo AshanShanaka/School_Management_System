@@ -14,6 +14,7 @@ import {
   createSubject,
   updateClass,
   updateSubject,
+  CurrentState,
 } from "@/lib/actions";
 import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect } from "react";
@@ -37,28 +38,45 @@ const ClassForm = ({
     formState: { errors },
   } = useForm<ClassSchema>({
     resolver: zodResolver(classSchema),
+    defaultValues: data
+      ? {
+          id: data.id,
+          name: data.name,
+          capacity: data.capacity,
+          gradeId: data.gradeId,
+          supervisorId: data.supervisorId,
+        }
+      : {
+          name: "",
+          capacity: 0,
+          gradeId: 0,
+          supervisorId: "",
+        },
   });
 
   // AFTER REACT 19 IT'LL BE USEACTIONSTATE
 
   const [state, formAction] = useFormState(
-    type === "create" ? createClass : updateClass,
+    (state: CurrentState, formData: ClassSchema) =>
+      type === "create"
+        ? createClass(state, formData)
+        : updateClass(state, formData),
     {
       success: false,
       error: false,
     }
   );
 
-  const onSubmit = handleSubmit((data) => {
-    console.log(data);
-    formAction(data);
+  const onSubmit = handleSubmit((formData) => {
+    console.log("Submitting class data:", formData);
+    formAction(formData);
   });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Subject has been ${type === "create" ? "created" : "updated"}!`);
+      toast(`Class has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
     }
@@ -83,6 +101,7 @@ const ClassForm = ({
         <InputField
           label="Capacity"
           name="capacity"
+          type="number"
           defaultValue={data?.capacity}
           register={register}
           error={errors?.capacity}
@@ -102,15 +121,12 @@ const ClassForm = ({
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("supervisorId")}
-            defaultValue={data?.teachers}
+            defaultValue={data?.supervisorId || ""}
           >
+            <option value="">Select a supervisor</option>
             {teachers.map(
               (teacher: { id: string; name: string; surname: string }) => (
-                <option
-                  value={teacher.id}
-                  key={teacher.id}
-                  selected={data && teacher.id === data.supervisorId}
-                >
+                <option value={teacher.id} key={teacher.id}>
                   {teacher.name + " " + teacher.surname}
                 </option>
               )
@@ -126,16 +142,13 @@ const ClassForm = ({
           <label className="text-xs text-gray-500">Grade</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("gradeId")}
-            defaultValue={data?.gradeId}
+            {...register("gradeId", { valueAsNumber: true })}
+            defaultValue={data?.gradeId || ""}
           >
+            <option value="">Select a grade</option>
             {grades.map((grade: { id: number; level: number }) => (
-              <option
-                value={grade.id}
-                key={grade.id}
-                selected={data && grade.id === data.gradeId}
-              >
-                {grade.level}
+              <option value={grade.id} key={grade.id}>
+                Grade {grade.level}
               </option>
             ))}
           </select>

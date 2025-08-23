@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatClassDisplay } from "@/lib/formatters";
 import Image from "next/image";
 
 interface AttendanceFormProps {
@@ -132,7 +133,7 @@ const AttendanceForm = ({
             <option value="">Choose a class</option>
             {classes.map((classItem) => (
               <option key={classItem.id} value={classItem.id}>
-                Grade {classItem.grade.level}-{classItem.name} (
+                {formatClassDisplay(classItem.name, classItem.grade.level)} (
                 {classItem._count.students} students)
               </option>
             ))}

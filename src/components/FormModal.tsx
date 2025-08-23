@@ -84,6 +84,10 @@ const GradeForm = dynamic(() => import("./forms/GradeForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
+const GradeDeleteForm = dynamic(() => import("./forms/GradeDeleteForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
 const TimetableForm = dynamic(() => import("./forms/TimetableForm"), {
   loading: () => <h1>Loading...</h1>,
 });
@@ -260,6 +264,11 @@ const FormModal = ({
   }, [state, router, table, onError]);
 
   const Form = () => {
+    // Special handling for grade deletion
+    if (type === "delete" && table === "grade" && id) {
+      return <GradeDeleteForm id={id} setOpen={setOpen} />;
+    }
+
     return type === "delete" && id ? (
       <form action={formAction} className="p-4 flex flex-col gap-4">
         <input type="hidden" name="id" value={id} />

@@ -1,11 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  const userId = sessionClaims?.userId;
+  const user = await getCurrentUser();
+  const role = user?.role;
+  const userId = user?.id;
 
   if (!role || !userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     } else if (role === "student") {
       // Get student's own attendance
       const student = await prisma.student.findUnique({
-        where: { id: userId as string },
+        where: { id: user?.id as string },
         include: {
           class: {
             include: {
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
 
       const studentAttendance = await prisma.attendance.findMany({
         where: {
-          studentId: userId as string,
+          studentId: user?.id as string,
           date: {
             gte: today,
             lt: tomorrow,
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       const monthAttendance = await prisma.attendance.findMany({
         where: {
-          studentId: userId as string,
+          studentId: user?.id as string,
           date: {
             gte: monthStart,
             lt: tomorrow,
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
     } else if (role === "parent") {
       // Get parent's children attendance
       const children = await prisma.student.findMany({
-        where: { parentId: userId as string },
+        where: { parentId: user?.id as string },
         include: {
           class: {
             include: {
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
     } else if (role === "teacher") {
       // Get teacher's classes attendance
       const teacherClasses = await prisma.class.findMany({
-        where: { supervisorId: userId as string },
+        where: { supervisorId: user?.id as string },
         include: {
           grade: true,
           _count: {

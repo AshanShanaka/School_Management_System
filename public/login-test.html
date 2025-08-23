@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, button { padding: 10px; width: 100%; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Login Test</h1>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="identifier">Username/Email:</label>
+                <input type="text" id="identifier" value="admin" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="admin123" required>
+            </div>
+            
+            <button type="submit">Login</button>
+        </form>
+        
+        <div id="result" class="result" style="display: none;"></div>
+        
+        <div style="margin-top: 30px;">
+            <h3>Quick Actions:</h3>
+            <button onclick="checkAuth()" style="margin: 5px;">Check Auth Status</button>
+            <button onclick="goToAdmin()" style="margin: 5px;">Go to Admin Dashboard</button>
+            <button onclick="checkDebugData()" style="margin: 5px;">Check Debug Data</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const identifier = document.getElementById('identifier').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ identifier, password }),
+                });
+
+                const data = await response.json();
+                
+                resultDiv.style.display = 'block';
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>Login Successful!</h3>
+                        <p><strong>User:</strong> ${data.user.name} ${data.user.surname}</p>
+                        <p><strong>Role:</strong> ${data.user.role}</p>
+                        <p><strong>Username:</strong> ${data.user.username}</p>
+                        <p><strong>Email:</strong> ${data.user.email}</p>
+                    `;
+                    
+                    // Test auth status after successful login
+                    setTimeout(checkAuth, 1000);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h3>Login Failed!</h3><p>${data.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h3>Error!</h3><p>${error.message}</p>`;
+            }
+        });
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/test');
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `
+                    <h3>Auth Status</h3>
+                    <p><strong>User:</strong> ${data.user ? data.user.name + ' (' + data.user.role + ')' : 'Not logged in'}</p>
+                    <p><strong>Has Auth Token:</strong> ${data.hasAuthToken ? 'Yes' : 'No'}</p>
+                    <p><strong>All Cookies:</strong> ${data.allCookies.length}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+
+        function goToAdmin() {
+            window.location.href = '/admin';
+        }
+
+        async function checkDebugData() {
+            try {
+                const response = await fetch('/api/debug/data');
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `
+                    <h3>Debug Data</h3>
+                    <p><strong>Success:</strong> ${data.success}</p>
+                    <p><strong>Current User:</strong> ${data.currentUser ? data.currentUser.name + ' (' + data.currentUser.role + ')' : 'None'}</p>
+                    <p><strong>Students Count:</strong> ${data.data?.studentsCount || 'N/A'}</p>
+                    <p><strong>Teachers Count:</strong> ${data.data?.teachersCount || 'N/A'}</p>
+                    <p><strong>Parents Count:</strong> ${data.data?.parentsCount || 'N/A'}</p>
+                `;
+            } catch (error) {
+                console.error('Debug data check failed:', error);
+            }
+        }
+
+        // Check auth status on page load
+        checkAuth();
+    </script>
+</body>
+</html>

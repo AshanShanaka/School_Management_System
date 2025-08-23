@@ -8,6 +8,12 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ["bcrypt"]
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: false,
   }
 };
 

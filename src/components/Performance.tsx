@@ -33,7 +33,7 @@ const Performance = () => {
         <p className="text-xs text-gray-300">of 10 max LTS</p>
       </div>
       <h2 className="font-medium absolute bottom-16 left-0 right-0 m-auto text-center">
-        1st Semester - 2nd Semester
+        1st Term - 2nd Term
       </h2>
     </div>
   );

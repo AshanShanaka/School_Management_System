@@ -1,11 +1,11 @@
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import TimetableView from "@/components/TimetableView";
 
 const TeacherTimetablePage = async () => {
-  const { sessionClaims, userId } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const user = await getCurrentUser();
+  const role = user?.role;
 
   if (role !== "teacher") {
     return notFound();
@@ -13,7 +13,7 @@ const TeacherTimetablePage = async () => {
 
   // Get teacher data
   const teacher = await prisma.teacher.findUnique({
-    where: { id: userId! },
+    where: { id: user?.id },
     include: {
       subjects: {
         include: {

@@ -5,7 +5,7 @@ import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma, Timetable } from "@prisma/client";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -26,8 +26,8 @@ const TimetableListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const user = await getCurrentUser();
+  const role = user?.role;
 
   const { page, ...queryParams } = searchParams;
 
@@ -35,6 +35,48 @@ const TimetableListPage = async ({
 
   // URL PARAMS CONDITION
   const query: Prisma.TimetableWhereInput = {};
+
+  // Filter based on user role
+  if (role === "student") {
+    // Students can only see their class timetable
+    const student = await prisma.student.findUnique({
+      where: { id: user?.id },
+      include: { class: true }
+    });
+    if (student?.classId) {
+      query.classId = student.classId;
+    }
+  } else if (role === "parent") {
+    // Parents can see their children's class timetables
+    const parent = await prisma.parent.findUnique({
+      where: { id: user?.id },
+    });
+    // Find children of this parent
+    const children = await prisma.student.findMany({
+      where: { parentId: parent?.id },
+      select: { classId: true }
+    });
+    if (children && children.length > 0) {
+      query.classId = {
+        in: children.map(s => s.classId).filter(Boolean) as number[]
+      };
+    }
+  } else if (role === "teacher") {
+    // Teachers can see timetables for classes they teach
+    const teacher = await prisma.teacher.findUnique({
+      where: { id: user?.id },
+    });
+    // Find classes this teacher is assigned to
+    const assignments = await prisma.subjectAssignment.findMany({
+      where: { teacherId: teacher?.id },
+      select: { classId: true }
+    });
+    if (assignments && assignments.length > 0) {
+      query.classId = {
+        in: assignments.map(sa => sa.classId).filter(Boolean) as number[]
+      };
+    }
+  }
 
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
@@ -48,7 +90,9 @@ const TimetableListPage = async ({
             ];
             break;
           case "classId":
-            query.classId = parseInt(value);
+            if (role === "admin") { // Only admins can filter by any class
+              query.classId = parseInt(value);
+            }
             break;
           case "isActive":
             query.isActive = value === "true";
@@ -148,8 +192,12 @@ const TimetableListPage = async ({
               <Image src="/view.png" alt="" width={16} height={16} />
             </button>
           </Link>
-          <FormContainer table="timetable" type="update" data={item} />
-          <FormContainer table="timetable" type="delete" id={item.id} />
+          {role === "admin" && (
+            <>
+              <FormContainer table="timetable" type="update" data={item} />
+              <FormContainer table="timetable" type="delete" id={item.id} />
+            </>
+          )}
         </div>
       </td>
     </tr>
@@ -172,13 +220,15 @@ const TimetableListPage = async ({
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
             {role === "admin" && (
-              <Link href="/admin/timetable/create">
-                <button className="bg-lamaPurple text-white px-4 py-2 rounded-md hover:bg-lamaPurpleLight">
-                  Create Timetable
-                </button>
-              </Link>
+              <>
+                <Link href="/admin/timetable/create">
+                  <button className="bg-lamaPurple text-white px-4 py-2 rounded-md hover:bg-lamaPurpleLight">
+                    Create Timetable
+                  </button>
+                </Link>
+                <FormContainer table="timetable" type="create" />
+              </>
             )}
-            <FormContainer table="timetable" type="create" />
           </div>
         </div>
       </div>

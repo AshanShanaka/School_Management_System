@@ -1,277 +1,357 @@
 import Announcements from "@/components/Announcements";
-import AttendanceDashboardContainer from "@/components/AttendanceDashboardContainer";
-import BigCalendarContainer from "@/components/BigCalendarContainer";
-import StudentAttendanceCard from "@/components/StudentAttendanceCard";
+import DashboardCard from "@/components/DashboardCard";
+import QuickActionCard from "@/components/QuickActionCard";
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
+import { formatClassDisplay } from "@/lib/formatters";
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
 
 const ParentPage = async () => {
-  const { userId } = auth();
-  const currentUserId = userId;
+  const user = await getCurrentUser();
 
-  // Get students with detailed information
-  const students = await prisma.student.findMany({
-    where: {
-      parentId: currentUserId!,
-    },
+  // Get parent data with children
+  const parent = await prisma.parent.findUnique({
+    where: { id: user?.id },
     include: {
-      class: {
+      students: {
         include: {
-          grade: true,
-          _count: { select: { lessons: true, students: true } },
-        },
-      },
-    },
-  });
-
-  // Get upcoming assignments for all children
-  const upcomingAssignments = await prisma.assignment.findMany({
-    where: {
-      lesson: {
-        class: {
-          students: {
-            some: {
-              parentId: currentUserId!,
-            },
-          },
-        },
-      },
-      dueDate: { gte: new Date() },
-    },
-    include: {
-      lesson: {
-        select: {
-          subject: { select: { name: true } },
           class: {
-            select: {
-              name: true,
-              grade: { select: { level: true } },
+            include: {
+              grade: true,
             },
           },
         },
       },
     },
-    orderBy: { dueDate: "asc" },
-    take: 10,
   });
 
-  // Get recent results for all children
-  const recentResults = await prisma.result.findMany({
+  // Get recent attendance for all children
+  const recentAttendance = await prisma.attendance.findMany({
     where: {
-      student: {
-        parentId: currentUserId!,
+      studentId: {
+        in: parent?.students.map((s) => s.id) || [],
+      },
+      date: {
+        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
       },
     },
     include: {
-      student: { select: { name: true, surname: true } },
-      assignment: {
-        select: {
-          title: true,
-          lesson: {
-            select: {
-              subject: { select: { name: true } },
-            },
-          },
+      student: true,
+      lesson: {
+        include: {
+          subject: true,
         },
       },
     },
-    orderBy: { id: "desc" },
+    orderBy: { date: "desc" },
     take: 10,
   });
 
-  if (students.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-gray-500">No children found in the system.</p>
-      </div>
-    );
-  }
+  // Get upcoming exams for children
+  const upcomingExams = await prisma.exam.findMany({
+    where: {
+      startTime: {
+        gte: new Date(),
+      },
+    },
+    orderBy: { startTime: "asc" },
+    take: 5,
+  });
+
+  const totalChildren = parent?.students.length || 0;
+  const attendanceRate =
+    recentAttendance.length > 0
+      ? Math.round(
+          (recentAttendance.filter((a) => a.present).length /
+            recentAttendance.length) *
+            100
+        )
+      : 100;
 
   return (
-    <div className="p-4 flex gap-4 flex-col xl:flex-row">
-      {/* LEFT */}
-      <div className="w-full xl:w-2/3 flex flex-col gap-4">
-        {/* CHILDREN OVERVIEW */}
-        <div className="bg-white p-4 rounded-md">
-          <h2 className="text-xl font-semibold mb-4">My Children</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {students.map((student) => (
-              <div
-                key={student.id}
-                className="bg-lamaSky p-4 rounded-md flex gap-4"
-              >
-                <Image
-                  src={student.img || "/noAvatar.png"}
-                  alt=""
-                  width={60}
-                  height={60}
-                  className="w-15 h-15 rounded-full object-cover"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold">
-                    {student.name} {student.surname}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Class: {student.class.grade.level}-{student.class.name}
-                  </p>
-                  <div className="mt-2 flex gap-2">
-                    <Link
-                      href={`/list/students/${student.id}`}
-                      className="text-xs bg-white px-2 py-1 rounded hover:bg-gray-100"
-                    >
-                      View Profile
-                    </Link>
-                    <Link
-                      href={`/list/results?studentId=${student.id}`}
-                      className="text-xs bg-white px-2 py-1 rounded hover:bg-gray-100"
-                    >
-                      Results
-                    </Link>
+    <div className="p-6 space-y-8">
+      {/* Page Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-white">
+        <div className="flex items-center space-x-4">
+          <div className="bg-white bg-opacity-20 rounded-full p-3">
+            <Image src="/parent.png" alt="Parent" width={32} height={32} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">
+              Welcome, {parent?.name} {parent?.surname}
+            </h1>
+            <p className="text-purple-100">
+              Parent Dashboard - Monitor your children's progress
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <DashboardCard
+          title="My Children"
+          count={totalChildren}
+          icon="/student.png"
+          href="/parent/children"
+          bgColor="bg-gradient-to-br from-blue-500 to-blue-700"
+          description="Enrolled children"
+        />
+        <DashboardCard
+          title="Attendance Rate"
+          count={attendanceRate}
+          icon="/attendance.png"
+          href="/parent/attendance"
+          bgColor="bg-gradient-to-br from-green-500 to-green-700"
+          description="7-day average %"
+        />
+        <DashboardCard
+          title="Upcoming Exams"
+          count={upcomingExams.length}
+          icon="/exam.png"
+          href="/list/exams"
+          bgColor="bg-gradient-to-br from-orange-500 to-orange-700"
+          description="This month"
+        />
+        <DashboardCard
+          title="Messages"
+          count={0}
+          icon="/message.png"
+          href="/list/messages"
+          bgColor="bg-gradient-to-br from-purple-500 to-purple-700"
+          description="Unread messages"
+        />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <QuickActionCard
+          title="View Attendance"
+          description="Check your children's attendance records"
+          icon="/attendance.png"
+          href="/parent/attendance"
+          bgColor="bg-white"
+          iconBgColor="bg-green-100"
+        />
+        <QuickActionCard
+          title="Academic Results"
+          description="View exam results and grades"
+          icon="/result.png"
+          href="/list/results"
+          bgColor="bg-white"
+          iconBgColor="bg-blue-100"
+        />
+        <QuickActionCard
+          title="Timetable"
+          description="Check class schedules"
+          icon="/calendar.png"
+          href="/list/timetables"
+          bgColor="bg-white"
+          iconBgColor="bg-purple-100"
+        />
+        <QuickActionCard
+          title="Assignments"
+          description="Track homework and assignments"
+          icon="/assignment.png"
+          href="/list/assignments"
+          bgColor="bg-white"
+          iconBgColor="bg-orange-100"
+        />
+        <QuickActionCard
+          title="School Events"
+          description="Stay updated with school events"
+          icon="/calendar.png"
+          href="/list/events"
+          bgColor="bg-white"
+          iconBgColor="bg-indigo-100"
+        />
+        <QuickActionCard
+          title="Contact Teachers"
+          description="Send messages to teachers"
+          icon="/message.png"
+          href="/list/messages"
+          bgColor="bg-white"
+          iconBgColor="bg-pink-100"
+        />
+      </div>
+
+      {/* Children & Their Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* My Children */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+            <Image
+              src="/student.png"
+              alt="Students"
+              width={24}
+              height={24}
+              className="mr-2"
+            />
+            My Children
+          </h2>
+          <div className="space-y-4">
+            {parent?.students && parent.students.length > 0 ? (
+              parent.students.map((student) => (
+                <div
+                  key={student.id}
+                  className="border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Image
+                        src="/student.png"
+                        alt="Student"
+                        width={24}
+                        height={24}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-800">
+                        {student.name} {student.surname}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {formatClassDisplay(
+                          student.class.name,
+                          student.class.grade.level
+                        )}{" "}
+                        - Grade {student.class.grade.level}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Student ID: {student.id}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Link
+                        href={`/student/${student.id}`}
+                        className="text-blue-600 text-sm font-medium hover:text-blue-800"
+                      >
+                        View Details →
+                      </Link>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Image
+                  src="/student.png"
+                  alt="No children"
+                  width={48}
+                  height={48}
+                  className="mx-auto mb-3 opacity-50"
+                />
+                <p>No children registered</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* ATTENDANCE DASHBOARD */}
-        <AttendanceDashboardContainer />
-
-        {/* ATTENDANCE OVERVIEW */}
-        <div className="bg-white p-4 rounded-md">
-          <h2 className="text-lg font-semibold mb-4">Attendance Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {students.map((student) => (
-              <div key={student.id} className="border p-3 rounded-md">
-                <h4 className="font-medium mb-2">
-                  {student.name} {student.surname}
-                </h4>
-                <Suspense fallback="Loading attendance...">
-                  <StudentAttendanceCard id={student.id} />
-                </Suspense>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* SCHEDULES */}
-        <div className="space-y-4">
-          {students.map((student) => (
-            <div key={student.id} className="bg-white p-4 rounded-md">
-              <h2 className="text-lg font-semibold mb-4">
-                {student.name}&apos;s Schedule - Class{" "}
-                {student.class.grade.level}-{student.class.name}
-              </h2>
-              <div className="h-[400px]">
-                <BigCalendarContainer type="classId" id={student.classId} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* UPCOMING ASSIGNMENTS */}
-        <div className="bg-white p-4 rounded-md">
-          <h2 className="text-lg font-semibold mb-4">Upcoming Assignments</h2>
-          {upcomingAssignments.length > 0 ? (
-            <div className="space-y-3">
-              {upcomingAssignments.map((assignment) => (
+        {/* Recent Attendance */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+            <Image
+              src="/attendance.png"
+              alt="Attendance"
+              width={24}
+              height={24}
+              className="mr-2"
+            />
+            Recent Attendance
+          </h2>
+          <div className="space-y-3">
+            {recentAttendance.length > 0 ? (
+              recentAttendance.slice(0, 5).map((attendance) => (
                 <div
-                  key={assignment.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                  key={attendance.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                 >
                   <div>
-                    <h4 className="font-medium">{assignment.title}</h4>
-                    <p className="text-sm text-gray-500">
-                      {assignment.lesson.subject.name} • Class{" "}
-                      {assignment.lesson.class.grade.level}-
-                      {assignment.lesson.class.name}
-                    </p>
+                    <div className="font-medium text-gray-800">
+                      {attendance.student.name} {attendance.student.surname}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {attendance.lesson.subject.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {attendance.date.toLocaleDateString()}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {new Intl.DateTimeFormat("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      }).format(assignment.dueDate)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Intl.DateTimeFormat("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }).format(assignment.dueDate)}
-                    </p>
+                    <span
+                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        attendance.present
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {attendance.present ? "Present" : "Absent"}
+                    </span>
                   </div>
                 </div>
-              ))}
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Image
+                  src="/attendance.png"
+                  alt="No attendance"
+                  width={48}
+                  height={48}
+                  className="mx-auto mb-3 opacity-50"
+                />
+                <p>No recent attendance records</p>
+              </div>
+            )}
+          </div>
+          {recentAttendance.length > 5 && (
+            <div className="mt-4 text-center">
+              <Link
+                href="/parent/attendance"
+                className="text-blue-600 text-sm font-medium hover:text-blue-800"
+              >
+                View All Attendance →
+              </Link>
             </div>
-          ) : (
-            <p className="text-gray-500">No upcoming assignments</p>
           )}
         </div>
       </div>
 
-      {/* RIGHT */}
-      <div className="w-full xl:w-1/3 flex flex-col gap-4">
-        {/* QUICK STATS */}
-        <div className="bg-white p-4 rounded-md">
-          <h2 className="text-lg font-semibold mb-4">Quick Stats</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Total Children:</span>
-              <span className="font-semibold">{students.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Total Classes:</span>
-              <span className="font-semibold">
-                {Array.from(new Set(students.map((s) => s.classId))).length}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Upcoming Assignments:
-              </span>
-              <span className="font-semibold">
-                {upcomingAssignments.length}
-              </span>
-            </div>
+      {/* Upcoming Exams */}
+      {upcomingExams.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+            <Image
+              src="/exam.png"
+              alt="Exams"
+              width={24}
+              height={24}
+              className="mr-2"
+            />
+            Upcoming Exams
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcomingExams.map((exam) => (
+              <div
+                key={exam.id}
+                className="border border-gray-200 rounded-lg p-4"
+              >
+                <div className="font-medium text-gray-800">{exam.title}</div>
+                <div className="text-sm text-gray-600 mb-2">Exam</div>
+                <div className="text-sm text-blue-600 font-medium">
+                  {exam.startTime.toLocaleDateString()} at{" "}
+                  {exam.startTime.toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      )}
 
-        {/* RECENT RESULTS */}
-        <div className="bg-white p-4 rounded-md">
-          <h2 className="text-lg font-semibold mb-4">Recent Results</h2>
-          {recentResults.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {recentResults.map((result) => (
-                <div
-                  key={result.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
-                >
-                  <div>
-                    <h4 className="font-medium text-sm">
-                      {result.assignment?.title}
-                    </h4>
-                    <p className="text-xs text-gray-500">
-                      {result.student.name} •{" "}
-                      {result.assignment?.lesson.subject.name}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-blue-600">
-                      {result.score}%
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">No results available</p>
-          )}
-        </div>
-
+      {/* Announcements */}
+      <div className="bg-white rounded-xl shadow-lg">
         <Announcements />
       </div>
     </div>

@@ -9,7 +9,8 @@ import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/contexts/AuthContext";
+// TODO: Replace useAuth with custom auth hook
 
 const LessonForm = ({
   type,
@@ -73,7 +74,8 @@ const LessonForm = ({
   const router = useRouter();
 
   const { subjects, classes } = relatedData;
-  const { userId } = useAuth();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   // Filter subjects to show only those assigned to the teacher
   const teacherSubjects = subjects.filter((subject: any) =>

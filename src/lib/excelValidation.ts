@@ -12,7 +12,7 @@ export interface ExcelValidationResult {
   warnings: string[];
 }
 
-// Enhanced email validation for Clerk compatibility
+// Enhanced email validation for Clerk compatibility - SIMPLIFIED
 export function validateEmailFormat(email: string): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -23,31 +23,11 @@ export function validateEmailFormat(email: string): ValidationError[] {
 
   const trimmedEmail = email.trim().toLowerCase();
 
-  // Basic email regex that's compatible with Clerk
-  const emailRegex =
-    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-  if (!emailRegex.test(trimmedEmail)) {
+  // Simple email check - just needs @ symbol
+  if (!trimmedEmail.includes("@") || trimmedEmail.length < 3) {
     errors.push({
       field: "email",
-      message: "Invalid email format",
-      value: email,
-    });
-  }
-
-  if (trimmedEmail.length > 254) {
-    errors.push({
-      field: "email",
-      message: "Email is too long (max 254 characters)",
-      value: email,
-    });
-  }
-
-  // Check for consecutive dots
-  if (trimmedEmail.includes("..")) {
-    errors.push({
-      field: "email",
-      message: "Email contains consecutive dots",
+      message: "Email must contain @ symbol",
       value: email,
     });
   }
@@ -55,7 +35,7 @@ export function validateEmailFormat(email: string): ValidationError[] {
   return errors;
 }
 
-// Enhanced password validation for Clerk compatibility
+// Enhanced password validation for Clerk compatibility - SIMPLIFIED
 export function validatePasswordFormat(password: string): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -64,32 +44,17 @@ export function validatePasswordFormat(password: string): ValidationError[] {
     return errors;
   }
 
-  if (password.length < 8) {
+  if (password.trim().length === 0) {
     errors.push({
       field: "password",
-      message: "Password must be at least 8 characters long",
-    });
-  }
-
-  if (password.length > 128) {
-    errors.push({
-      field: "password",
-      message: "Password is too long (max 128 characters)",
-    });
-  }
-
-  // Check for spaces (may cause issues with Clerk)
-  if (password.includes(" ")) {
-    errors.push({
-      field: "password",
-      message: "Password should not contain spaces",
+      message: "Password cannot be empty",
     });
   }
 
   return errors;
 }
 
-// Enhanced name validation for Clerk compatibility
+// Enhanced name validation for Clerk compatibility - SIMPLIFIED
 export function validateNameFormat(
   name: string,
   fieldName: string
@@ -107,21 +72,11 @@ export function validateNameFormat(
     errors.push({ field: fieldName, message: `${fieldName} cannot be empty` });
   }
 
-  if (trimmedName.length > 50) {
+  // Very basic validation - just check it's not too long
+  if (trimmedName.length > 100) {
     errors.push({
       field: fieldName,
-      message: `${fieldName} is too long (max 50 characters)`,
-      value: name,
-    });
-  }
-
-  // Check for invalid characters that might cause Clerk issues
-  const nameRegex =
-    /^[a-zA-Z\s\-'\.àáâäãåąčćđèéêëęìíîïłńòóôöõøùúûüųśşßÿźžñç]+$/;
-  if (!nameRegex.test(trimmedName)) {
-    errors.push({
-      field: fieldName,
-      message: `${fieldName} contains invalid characters`,
+      message: `${fieldName} is too long (max 100 characters)`,
       value: name,
     });
   }
@@ -149,17 +104,17 @@ export function validatePhoneNumber(phone: string): boolean {
   return phoneRegex.test(phone.replace(/\s/g, ""));
 }
 
-// Validate grade level
+// Validate grade level - SIMPLIFIED
 export function validateGradeLevel(grade: string): boolean {
+  if (!grade) return false;
   const gradeNum = parseInt(grade);
-  return !isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 12;
+  return !isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 13; // Extended to 13 for flexibility
 }
 
-// Validate class name format
+// Validate class name format - SIMPLIFIED (accept any format)
 export function validateClassName(className: string): boolean {
   if (!className || typeof className !== "string") return false;
-  const classRegex = /^[1-9][0-9]?[A-Z]$/; // Like 5A, 10B, etc.
-  return classRegex.test(className.toUpperCase());
+  return className.trim().length > 0; // Accept any non-empty class name
 }
 
 // Generate validation report for student+parent row
@@ -221,9 +176,11 @@ export function validateStudentParentRow(
   }
 
   if (!validateClassName(row.student_class)) {
-    warnings.push(
-      `Class name "${row.student_class}" doesn't follow standard format (e.g., 5A, 10B). It will be created as-is.`
-    );
+    errors.push({
+      field: "student_class",
+      message: "Student class cannot be empty",
+      value: row.student_class,
+    });
   }
 
   if (row.student_phone && !validatePhoneNumber(row.student_phone)) {

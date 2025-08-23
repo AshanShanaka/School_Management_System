@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import BigCalendar from "./BigCalender";
 import { adjustScheduleToCurrentWeek } from "@/lib/utils";
+import { formatClassDisplay } from "@/lib/formatters";
 
 const BigCalendarContainer = async ({
   type,
@@ -26,7 +27,10 @@ const BigCalendarContainer = async ({
   });
 
   const data = dataRes.map((lesson) => ({
-    title: `${lesson.name} (${lesson.subject.name} - ${lesson.class.grade.level}-${lesson.class.name})`,
+    title: `${lesson.name} (${lesson.subject.name} - ${formatClassDisplay(
+      lesson.class.name,
+      lesson.class.grade.level
+    )})`,
     start: new Date(lesson.startTime),
     end: new Date(lesson.endTime),
   }));

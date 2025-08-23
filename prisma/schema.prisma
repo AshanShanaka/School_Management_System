@@ -8,22 +8,30 @@ datasource db {
 }
 
 model Admin {
-  id       String @id
-  username String @unique
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  name      String
+  surname   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Student {
-  id          String       @id
+  id          String       @id @default(cuid())
   username    String       @unique
+  email       String?      @unique
+  password    String
   name        String
   surname     String
-  email       String?      @unique
   phone       String?      @unique
   address     String
   img         String?
   bloodType   String?
   sex         UserSex
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   parentId    String
   parent      Parent       @relation(fields: [parentId], references: [id], onDelete: Cascade)
   classId     Int
@@ -36,17 +44,19 @@ model Student {
 }
 
 model Teacher {
-  id                 String              @id
+  id                 String              @id @default(cuid())
   username           String              @unique
+  email              String?             @unique
+  password           String
   name               String
   surname            String
-  email              String?             @unique
   phone              String?             @unique
   address            String
   img                String?
   bloodType          String?
   sex                UserSex
   createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   subjects           Subject[]
   lessons            Lesson[]
   classes            Class[]
@@ -57,18 +67,30 @@ model Teacher {
 }
 
 model Parent {
-  id        String    @id
+  id        String    @id @default(cuid())
   username  String    @unique
+  email     String?   @unique
+  password  String
   name      String
   surname   String
-  email     String?   @unique
   phone     String    @unique
   address   String
   img       String?
   sex       UserSex
   birthday  DateTime
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   students  Student[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  userType  String // 'admin', 'teacher', 'student', 'parent'
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Grade {
