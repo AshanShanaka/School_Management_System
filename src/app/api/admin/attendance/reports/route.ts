@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
         studentStats.set(studentId, {
           studentId,
           studentName: `${attendance.student.name} ${attendance.student.surname}`,
-          className: `${attendance.student.class.grade.level}-${attendance.student.class.name}`,
+          className: attendance.student.class.name,
           totalLessons: 0,
           presentLessons: 0,
           absentLessons: 0,

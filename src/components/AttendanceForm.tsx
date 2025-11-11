@@ -159,7 +159,7 @@ const AttendanceForm = ({
           {/* CLASS INFO */}
           <div className="bg-lamaSky p-4 rounded-md">
             <h2 className="text-lg font-semibold mb-2">
-              Grade {selectedClass.grade.level}-{selectedClass.name}
+              Grade {selectedClass.name}
             </h2>
             <div className="flex gap-6 text-sm">
               <div>

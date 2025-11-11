@@ -145,7 +145,7 @@ const ParentPage = async () => {
           title="Timetable"
           description="Check class schedules"
           icon="/calendar.png"
-          href="/list/timetables"
+          href="/parent/timetable"
           bgColor="bg-white"
           iconBgColor="bg-purple-100"
         />

@@ -81,7 +81,42 @@ export async function GET(request: NextRequest) {
                   lte: endDate,
                 },
               },
+              include: {
+                lesson: {
+                  include: {
+                    class: true,
+                    subject: true,
+                  },
+                },
+              },
             },
+          },
+        },
+        lessons: {
+          where: {
+            // Only include lessons that have attendance records in the date range
+            attendances: {
+              some: {
+                date: {
+                  gte: startDate,
+                  lte: endDate,
+                },
+              },
+            },
+          },
+          include: {
+            attendances: {
+              where: {
+                date: {
+                  gte: startDate,
+                  lte: endDate,
+                },
+              },
+              include: {
+                student: true,
+              },
+            },
+            subject: true,
           },
         },
       },
@@ -93,56 +128,93 @@ export async function GET(request: NextRequest) {
       const totalStudents = classItem.students.length;
 
       if (period === "daily") {
-        // For daily view, show today's attendance
-        const presentStudents = classItem.students.filter((student) =>
-          student.attendances.some((att) => att.present)
-        ).length;
-        const absentStudents = classItem.students.filter(
-          (student) =>
-            student.attendances.length === 0 ||
-            student.attendances.every((att) => !att.present)
-        ).length;
+        // For daily view, get attendance from lessons taught today
+        const todayAttendances = classItem.lessons.flatMap(
+          (lesson) => lesson.attendances
+        );
+
+        if (todayAttendances.length === 0) {
+          // No attendance taken yet for this date
+          return {
+            classId: classItem.id,
+            className: `${classItem.grade.level}-${classItem.name}`,
+            gradeLevel: classItem.grade.level,
+            totalStudents,
+            presentToday: 0,
+            absentToday: totalStudents,
+            lateToday: 0,
+            attendanceRate: 0,
+            hasAttendanceData: false,
+          };
+        }
+
+        // Group attendance by student to get unique students
+        const studentAttendanceMap = new Map();
+        todayAttendances.forEach((attendance) => {
+          const studentId = attendance.student.id;
+          if (!studentAttendanceMap.has(studentId)) {
+            studentAttendanceMap.set(studentId, []);
+          }
+          studentAttendanceMap.get(studentId).push(attendance);
+        });
+
+        // Calculate present/absent based on majority of attendance records for each student
+        let presentToday = 0;
+        let absentToday = 0;
+        let lateToday = 0;
+
+        studentAttendanceMap.forEach((attendances, studentId) => {
+          const presentCount = attendances.filter((att) => att.present).length;
+          const totalCount = attendances.length;
+
+          if (presentCount > totalCount / 2) {
+            presentToday++;
+          } else {
+            absentToday++;
+          }
+        });
+
+        // Students with no attendance records are considered absent
+        const studentsWithAttendance = studentAttendanceMap.size;
+        absentToday += totalStudents - studentsWithAttendance;
 
         return {
           classId: classItem.id,
           className: `${classItem.grade.level}-${classItem.name}`,
           gradeLevel: classItem.grade.level,
           totalStudents,
-          presentToday: presentStudents,
-          absentToday: absentStudents,
+          presentToday,
+          absentToday,
+          lateToday,
           attendanceRate:
             totalStudents > 0
-              ? Math.round((presentStudents / totalStudents) * 100)
+              ? Math.round((presentToday / totalStudents) * 100)
               : 0,
+          hasAttendanceData: true,
         };
       } else {
         // For weekly/monthly/yearly view, calculate average attendance
-        const allAttendanceRecords = classItem.students.flatMap(
-          (student) => student.attendances
+        const allAttendances = classItem.lessons.flatMap(
+          (lesson) => lesson.attendances
         );
-        const totalRecords = allAttendanceRecords.length;
-        const presentRecords = allAttendanceRecords.filter(
-          (att) => att.present
-        ).length;
 
-        // Calculate unique days with attendance records
-        const uniqueDays = new Set(
-          allAttendanceRecords.map(
-            (att) => att.date.toISOString().split("T")[0]
-          )
+        const totalAttendanceRecords = allAttendances.length;
+        const presentRecords = allAttendances.filter((att) => att.present).length;
+
+        // Calculate unique days with lessons
+        const uniqueDates = new Set(
+          allAttendances.map((att) => att.date.toISOString().split("T")[0])
         ).size;
 
+        // Calculate averages per student per day
         const avgPresent =
-          uniqueDays > 0
-            ? Math.round((presentRecords / totalStudents / uniqueDays) * 100) /
-              100
+          uniqueDates > 0 && totalStudents > 0
+            ? presentRecords / uniqueDates / totalStudents
             : 0;
+
         const avgAbsent =
-          uniqueDays > 0
-            ? Math.round(
-                ((totalRecords - presentRecords) / totalStudents / uniqueDays) *
-                  100
-              ) / 100
+          uniqueDates > 0 && totalStudents > 0
+            ? (totalAttendanceRecords - presentRecords) / uniqueDates / totalStudents
             : 0;
 
         return {
@@ -150,12 +222,12 @@ export async function GET(request: NextRequest) {
           className: `${classItem.grade.level}-${classItem.name}`,
           gradeLevel: classItem.grade.level,
           totalStudents,
-          averagePresent: avgPresent,
-          averageAbsent: avgAbsent,
-          totalDays: uniqueDays,
+          averagePresent: Math.round(avgPresent * 100) / 100,
+          averageAbsent: Math.round(avgAbsent * 100) / 100,
+          totalDays: uniqueDates,
           attendanceRate:
-            totalRecords > 0
-              ? Math.round((presentRecords / totalRecords) * 100)
+            totalAttendanceRecords > 0
+              ? Math.round((presentRecords / totalAttendanceRecords) * 100)
               : 0,
         };
       }
@@ -187,7 +259,10 @@ export async function GET(request: NextRequest) {
           (sum, cls) => sum + (cls.absentToday || 0),
           0
         ),
-        totalLate: 0, // Late tracking not implemented in current schema
+        totalLate: classWiseData.reduce(
+          (sum, cls) => sum + (cls.lateToday || 0),
+          0
+        ),
       });
     }
 

@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
-// import TimetableView from "@/components/TimetableView";
+import TimetableView from "@/components/TimetableView";
 import Image from "next/image";
 
 export default async function ParentTimetablePage() {
@@ -39,7 +39,7 @@ export default async function ParentTimetablePage() {
 
   // Get timetables for all children's classes
   const classIds = children.map((child) => child.classId);
-  const timetables = await prisma.timetable.findMany({
+  const timetables = await prisma.schoolTimetable.findMany({
     where: {
       classId: { in: classIds },
       isActive: true,
@@ -80,8 +80,7 @@ export default async function ParentTimetablePage() {
           return (
             <div key={child.id} className="bg-white p-6 rounded-md">
               <h2 className="text-xl font-semibold mb-4">
-                {child.name} {child.surname} - Grade {child.class.grade.level}-
-                {child.class.name}
+                {child.name} {child.surname} - Class {child.class.name}
               </h2>
               <p className="text-gray-500">
                 No active timetable found for this class.
@@ -106,18 +105,13 @@ export default async function ParentTimetablePage() {
                     {child.name} {child.surname}
                   </h2>
                   <p className="text-lamaSkyLight">
-                    Grade {child.class.grade.level}-{child.class.name} •{" "}
-                    {childTimetable.academicYear}
+                    Class {child.class.name} • {childTimetable.academicYear}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-md">
-              <p className="text-gray-500">
-                Timetable view temporarily disabled for maintenance.
-              </p>
-            </div>
+            <TimetableView timetable={childTimetable} userRole={role} />
           </div>
         );
       })}

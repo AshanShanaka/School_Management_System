@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { parentSchema, ParentSchema } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/hooks/useFormState";
 import { createParent, updateParent, deleteParent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -99,23 +99,24 @@ const ParentForm = ({
       </span>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          label="Username"
+          label="Parent Email"
+          name="email"
+          type="email"
+          defaultValue={data?.email}
+          register={register}
+          error={errors.email}
+        />
+        <InputField
+          label="Parent Username"
           name="username"
           defaultValue={data?.username}
           register={register}
           error={errors.username}
         />
-        <InputField
-          label="Email"
-          name="email"
-          defaultValue={data?.email}
-          register={register}
-          error={errors.email}
-        />
         {type === "create" && (
           <div className="w-full md:w-[45%]">
             <InputField
-              label="Password"
+              label="Parent Password"
               name="password"
               type="password"
               register={register}
@@ -127,7 +128,7 @@ const ParentForm = ({
         )}
       </div>
       <span className="text-xs text-gray-400 font-medium">
-        Personal Information
+        Parent Information
       </span>
       <CldUploadWidget
         uploadPreset="school"
@@ -147,21 +148,21 @@ const ParentForm = ({
       </CldUploadWidget>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          label="First Name"
+          label="Parent First Name"
           name="name"
           defaultValue={data?.name}
           register={register}
           error={errors.name}
         />
         <InputField
-          label="Last Name"
+          label="Parent Last Name"
           name="surname"
           defaultValue={data?.surname}
           register={register}
           error={errors.surname}
         />
         <InputField
-          label="Phone"
+          label="Parent Phone"
           name="phone"
           defaultValue={data?.phone}
           register={register}
@@ -175,7 +176,7 @@ const ParentForm = ({
           error={errors.address}
         />
         <InputField
-          label="Birthday"
+          label="Parent Birthday"
           name="birthday"
           type="date"
           defaultValue={
@@ -186,18 +187,22 @@ const ParentForm = ({
           register={register}
           error={errors.birthday}
         />
-        <InputField
-          label="Sex"
-          name="sex"
-          register={register}
-          error={errors.sex}
-          type="select"
-          options={[
-            { value: "MALE", label: "Male" },
-            { value: "FEMALE", label: "Female" },
-          ]}
-          defaultValue={data?.sex}
-        />
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Parent Sex</label>
+          <select
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("sex")}
+            defaultValue={data?.sex}
+          >
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+          </select>
+          {errors.sex?.message && (
+            <p className="text-xs text-red-400">
+              {errors.sex.message.toString()}
+            </p>
+          )}
+        </div>
         {data && (
           <InputField
             label="Id"

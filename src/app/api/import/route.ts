@@ -169,7 +169,39 @@ async function processTeacherData(
         continue;
       }
 
-      // Create teacher in database
+      // Process subjects (comma-separated subject names)
+      let subjectConnections: { name: string }[] = [];
+      if (validatedData.subjects && validatedData.subjects.trim() !== "") {
+        const subjectNames = validatedData.subjects
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+
+        // Find or create subjects
+        for (const subjectName of subjectNames) {
+          try {
+            // Try to find existing subject
+            let subject = await prisma.subject.findFirst({
+              where: { name: subjectName },
+            });
+
+            // Create subject if it doesn't exist
+            if (!subject) {
+              subject = await prisma.subject.create({
+                data: { name: subjectName },
+              });
+              console.log(`Created new subject: ${subjectName}`);
+            }
+
+            subjectConnections.push({ name: subjectName });
+          } catch (subjectError) {
+            console.error(`Error processing subject ${subjectName}:`, subjectError);
+            // Continue with other subjects even if one fails
+          }
+        }
+      }
+
+      // Create teacher in database with subject connections
       await prisma.teacher.create({
         data: {
           username,
@@ -181,10 +213,13 @@ async function processTeacherData(
           address: validatedData.address,
           sex: validatedData.teacher_sex as any,
           birthday: birthday,
+          subjects: {
+            connect: subjectConnections,
+          },
         },
       });
 
-      console.log(`Successfully processed teacher row ${rowNumber}`);
+      console.log(`Successfully processed teacher row ${rowNumber} with ${subjectConnections.length} subject(s)`);
       result.successfulImports++;
     } catch (error: any) {
       console.error(`Error processing teacher row ${rowNumber}:`, error);

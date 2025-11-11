@@ -70,8 +70,8 @@ const AssignmentListPage = async ({
       <td className="flex items-center gap-4 p-4">
         {item.lesson.subject.name}
       </td>
-      <td>
-        {item.lesson.class.grade.level}-{item.lesson.class.name}
+            <td className="hidden md:table-cell">
+        {item.lesson.class.name}
       </td>
       <td className="hidden md:table-cell">
         {item.lesson.teacher.name + " " + item.lesson.teacher.surname}

@@ -128,7 +128,7 @@ const TeacherPage = async () => {
           title="View Timetable"
           description="Check your teaching schedule"
           icon="/calendar.png"
-          href="/list/timetables"
+          href="/teacher/school-timetable"
           bgColor="bg-white"
           iconBgColor="bg-blue-100"
         />

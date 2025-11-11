@@ -114,7 +114,7 @@ const ResultListPage = async ({
             break;
           case "search":
             query.OR = [
-              { exam: { title: { contains: value, mode: "insensitive" } } },
+              { assignment: { title: { contains: value, mode: "insensitive" } } },
               { student: { name: { contains: value, mode: "insensitive" } } },
             ];
             break;
@@ -188,7 +188,7 @@ const ResultListPage = async ({
         teacherName: assessment.lesson.teacher.name,
         teacherSurname: assessment.lesson.teacher.surname,
         score: item.score,
-        className: `${assessment.lesson.class.grade.level}-${assessment.lesson.class.name}`,
+        className: assessment.lesson.class.name,
         startTime: assessment.startDate,
       };
     })

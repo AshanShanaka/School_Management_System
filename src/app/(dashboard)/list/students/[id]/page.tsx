@@ -147,7 +147,7 @@ const SingleStudentPage = async ({
               />
               <div className="">
                 <h1 className="text-xl font-semibold">
-                  {student.class.grade.level}-{student.class.name}
+                  {student.class.name}
                 </h1>
                 <span className="text-sm text-gray-400">Class</span>
               </div>

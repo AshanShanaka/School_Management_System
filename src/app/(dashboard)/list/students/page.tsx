@@ -5,7 +5,7 @@ import Image from "next/image";
 import Table from "@/components/Table";
 import StudentForm from "@/components/StudentForm";
 import ConfirmationModal from "@/components/ConfirmationModal";
-import { formatClassDisplay } from "@/lib/formatters";
+import { formatClassName } from "@/lib/formatClassName";
 import toast from "react-hot-toast";
 
 type Student = {
@@ -57,6 +57,7 @@ const StudentListPage = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"list" | "class">("list");
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
 
   const fetchData = async (page = 1, search = "", classId = "") => {
     try {
@@ -194,7 +195,7 @@ const StudentListPage = () => {
     const grouped: { [key: string]: Student[] } = {};
     students.forEach((student) => {
       const classKey = student.class
-        ? `${student.class.name} (Grade ${student.class.grade?.level})`
+        ? `${formatClassName(student.class.name)} (Grade ${student.class.grade?.level})`
         : "No Class Assigned";
       if (!grouped[classKey]) {
         grouped[classKey] = [];
@@ -204,14 +205,21 @@ const StudentListPage = () => {
     return grouped;
   };
 
+  // Toggle class expansion
+  const toggleClass = (className: string) => {
+    const newExpanded = new Set(expandedClasses);
+    if (newExpanded.has(className)) {
+      newExpanded.delete(className);
+    } else {
+      newExpanded.add(className);
+    }
+    setExpandedClasses(newExpanded);
+  };
+
   const columns = [
     { header: "Info", accessor: "info" },
-    {
-      header: "Student ID",
-      accessor: "studentId",
-      className: "hidden md:table-cell",
-    },
     { header: "Class", accessor: "class", className: "hidden md:table-cell" },
+    { header: "Parent/Guardian", accessor: "parent", className: "hidden md:table-cell" },
     { header: "Phone", accessor: "phone", className: "hidden lg:table-cell" },
     {
       header: "Address",
@@ -226,7 +234,7 @@ const StudentListPage = () => {
   const renderRow = (item: Student) => (
     <tr
       key={item.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+      className="border-b border-gray-100 even:bg-blue-50/30 text-sm hover:bg-indigo-50/50 transition-colors"
     >
       <td className="flex items-center gap-4 p-4">
         <Image
@@ -237,17 +245,30 @@ const StudentListPage = () => {
           className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <h3 className="font-semibold">
+          <h3 className="font-semibold text-gray-800">
             {item.name} {item.surname}
           </h3>
           <p className="text-xs text-gray-500">{item.email}</p>
+          <p className="text-xs text-indigo-600 font-medium">@{item.username}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.username}</td>
       <td className="hidden md:table-cell">
-        {item.class
-          ? formatClassDisplay(item.class.name, item.class.grade?.level)
-          : "No class"}
+        {item.class ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            {formatClassName(item.class.name)}
+          </span>
+        ) : (
+          <span className="text-gray-400 text-sm">No class</span>
+        )}
+      </td>
+      <td className="hidden md:table-cell">
+        {item.parent ? (
+          <span className="text-sm text-gray-700">
+            {item.parent.name} {item.parent.surname}
+          </span>
+        ) : (
+          <span className="text-gray-400 text-sm">Not assigned</span>
+        )}
       </td>
       <td className="hidden lg:table-cell">{item.phone || "N/A"}</td>
       <td className="hidden lg:table-cell">{item.address || "N/A"}</td>
@@ -256,14 +277,16 @@ const StudentListPage = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleEditStudent(item)}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-sm transition-all transform hover:scale-105"
+              title="Edit Student"
             >
               <Image src="/update.png" alt="" width={16} height={16} />
             </button>
             <button
               onClick={() => handleDeleteClick(item)}
               disabled={deleting === item.id}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-sm transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Delete Student"
             >
               {deleting === item.id ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -288,86 +311,79 @@ const StudentListPage = () => {
   }
 
   return (
-    <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="hidden md:block text-lg font-semibold">
-          {user?.role === "teacher"
-            ? "My Students"
-            : user?.role === "parent"
-            ? "My Children"
-            : user?.role === "student"
-            ? "My Classmates"
-            : "All Students"}
-        </h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const value = (e.currentTarget[0] as HTMLInputElement).value;
-              handleSearch(value);
-            }}
-            className="w-full md:w-auto flex items-center gap-2 text-xs rounded-full ring-[1.5px] ring-gray-300 px-2"
-          >
-            <Image src="/search.png" alt="" width={14} height={14} />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-[200px] p-2 bg-transparent outline-none"
-              defaultValue={searchTerm}
-            />
-          </form>
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {user?.role === "admin" && (
-              <button
-                onClick={handleCreateStudent}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-500 transition-colors"
-                title="Add New Student"
-              >
-                <Image
-                  src="/create.png"
-                  alt="Add Student"
-                  width={16}
-                  height={16}
-                />
+    <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6 rounded-xl shadow-lg flex-1 m-4 mt-0">
+      {/* Header with gradient */}
+      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-md border border-white/20 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              {user?.role === "teacher"
+                ? "My Students"
+                : user?.role === "parent"
+                ? "My Children"
+                : user?.role === "student"
+                ? "My Classmates"
+                : "All Students"}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Total: {total} student{total !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const value = (e.currentTarget[0] as HTMLInputElement).value;
+                handleSearch(value);
+              }}
+              className="w-full md:w-auto flex items-center gap-2 text-sm rounded-lg border border-gray-300 px-3 py-2 bg-white/90 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 shadow-sm transition-all"
+            >
+              <Image src="/search.png" alt="" width={16} height={16} className="opacity-50" />
+              <input
+                type="text"
+                placeholder="Search students..."
+                className="w-[200px] bg-transparent outline-none text-gray-700 placeholder-gray-400"
+                defaultValue={searchTerm}
+              />
+            </form>
+            <div className="flex items-center gap-2">
+              <button className="p-2 rounded-lg bg-white/90 border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm" title="Filter">
+                <Image src="/filter.png" alt="" width={18} height={18} />
               </button>
-            )}
+              <button className="p-2 rounded-lg bg-white/90 border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm" title="Sort">
+                <Image src="/sort.png" alt="" width={18} height={18} />
+              </button>
+              {user?.role === "admin" && (
+                <button
+                  onClick={handleCreateStudent}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium transition-all shadow-md transform hover:scale-105"
+                  title="Add New Student"
+                >
+                  <Image
+                    src="/create.png"
+                    alt="Add Student"
+                    width={16}
+                    height={16}
+                  />
+                  <span className="hidden sm:inline">Add Student</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Admin-specific class filters and view controls */}
+      {/* Admin-specific filters and view controls */}
       {user?.role === "admin" && (
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shadow-sm">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Image src="/class.png" alt="" width={20} height={20} />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-gray-800">
-                  Filter by Class
-                </label>
-                <p className="text-xs text-gray-500">
-                  Select a specific class to view students
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+          <div className="flex items-center gap-4">
             <select
               value={selectedClassId}
               onChange={(e) => handleClassFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm min-w-[250px]"
+              className="px-3 py-2 border border-indigo-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-white"
             >
-              <option value="all">
-                🏫 All Classes ({total} students total)
-              </option>
+              <option value="all">All Classes ({total} total)</option>
               {classes.map((cls) => {
-                // Get actual count for this specific class
                 const actualCount = students.filter(
                   (s) => s.class?.id === cls.id
                 ).length;
@@ -378,268 +394,162 @@ const StudentListPage = () => {
 
                 return (
                   <option key={cls.id} value={cls.id.toString()}>
-                    📚 {cls.name} - Grade {cls.grade?.level} ({displayCount}{" "}
-                    students)
+                    {formatClassName(cls.name)} - Grade {cls.grade?.level} ({displayCount})
                   </option>
                 );
               })}
             </select>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-end">
-              <label className="text-sm font-semibold text-gray-800">
-                View Mode
-              </label>
-              <p className="text-xs text-gray-500">
-                Choose how to display students
-              </p>
-            </div>
-            <div className="flex bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden">
-              <button
-                onClick={() => setViewMode("list")}
-                className={`px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                  viewMode === "list"
-                    ? "bg-blue-500 text-white shadow-sm"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                📋 List View
-              </button>
-              <button
-                onClick={() => setViewMode("class")}
-                className={`px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                  viewMode === "class"
-                    ? "bg-blue-500 text-white shadow-sm"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                🏫 Class View
-              </button>
-            </div>
+          <div className="flex bg-white border border-indigo-300 rounded-md overflow-hidden shadow-sm">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-2 text-sm transition-colors ${
+                viewMode === "list"
+                  ? "bg-indigo-500 text-white"
+                  : "text-indigo-700 hover:bg-indigo-100"
+              }`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("class")}
+              className={`px-3 py-2 text-sm transition-colors ${
+                viewMode === "class"
+                  ? "bg-indigo-500 text-white"
+                  : "text-indigo-700 hover:bg-indigo-100"
+              }`}
+            >
+              Class View
+            </button>
           </div>
         </div>
       )}
 
-      {/* Class View for Admin */}
+      {/* Simple Class View for Admin */}
       {user?.role === "admin" && viewMode === "class" ? (
-        <div className="space-y-8">
+        <div className="space-y-3">
           {Object.entries(groupStudentsByClass()).length === 0 ? (
-            <div className="text-center py-16">
-              <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Image
-                  src="/student.png"
-                  alt=""
-                  width={40}
-                  height={40}
-                  className="opacity-50"
-                />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No Students Found
-              </h3>
-              <p className="text-gray-500">
-                {selectedClassId !== "all"
-                  ? "No students in the selected class."
-                  : "No students have been added yet."}
-              </p>
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">No students found</div>
               {user?.role === "admin" && (
                 <button
                   onClick={handleCreateStudent}
-                  className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
                 >
-                  Add First Student
+                  Add Student
                 </button>
               )}
             </div>
           ) : (
             Object.entries(groupStudentsByClass()).map(
               ([className, classStudents]) => (
-                <div
-                  key={className}
-                  className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
-                >
-                  {/* Class Header */}
-                  <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white px-6 py-4">
+                <div key={className} className="border border-indigo-200 rounded-lg overflow-hidden shadow-sm bg-white">
+                  {/* Clickable Class Header */}
+                  <div 
+                    className="bg-gradient-to-r from-indigo-400 to-purple-400 text-white px-4 py-3 cursor-pointer hover:from-indigo-500 hover:to-purple-500 transition-all duration-200"
+                    onClick={() => toggleClass(className)}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                          <Image
-                            src="/class.png"
-                            alt=""
-                            width={24}
-                            height={24}
-                          />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-xl">{className}</h3>
-                          <p className="text-blue-100 text-sm">
-                            {classStudents.length} student
-                            {classStudents.length !== 1 ? "s" : ""} enrolled
-                          </p>
-                        </div>
-                      </div>
+                      <h3 className="font-semibold">{className}</h3>
                       <div className="flex items-center gap-2">
-                        <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
-                          {classStudents.length} 👥
+                        <span className="text-indigo-100">
+                          {classStudents.length} students
                         </span>
-                        <button className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors">
-                          <Image
-                            src="/more.png"
-                            alt=""
-                            width={16}
-                            height={16}
-                          />
-                        </button>
+                        <svg 
+                          className={`w-5 h-5 transition-transform ${expandedClasses.has(className) ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
 
-                  {/* Students Grid/List */}
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {/* Collapsible Students List */}
+                  {expandedClasses.has(className) && (
+                    <div className="divide-y divide-indigo-100 bg-white">
                       {classStudents.map((student) => (
-                        <div
-                          key={student.id}
-                          className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-200 border border-gray-200"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="relative">
-                                <Image
-                                  src={student.img || "/noAvatar.png"}
-                                  alt=""
-                                  width={48}
-                                  height={48}
-                                  className="rounded-full object-cover border-2 border-white shadow-sm"
-                                />
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 truncate">
+                        <div key={student.id} className="p-4 hover:bg-indigo-50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Image
+                                src={student.img || "/noAvatar.png"}
+                                alt=""
+                                width={40}
+                                height={40}
+                                className="rounded-full object-cover border-2 border-indigo-200"
+                              />
+                              <div>
+                                <div className="font-medium text-gray-800">
                                   {student.name} {student.surname}
-                                </h4>
-                                <p className="text-sm text-gray-600 truncate">
+                                </div>
+                                <div className="text-sm text-gray-600">
                                   {student.email}
-                                </p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                    ID: {student.username}
-                                  </span>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 ml-2">
-                              <button
-                                onClick={() => handleEditStudent(student)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-sm"
-                                title="Edit Student"
-                              >
-                                <Image
-                                  src="/update.png"
-                                  alt=""
-                                  width={14}
-                                  height={14}
-                                />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(student)}
-                                disabled={deleting === student.id}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 transition-colors shadow-sm"
-                                title="Delete Student"
-                              >
-                                {deleting === student.id ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                ) : (
-                                  <Image
-                                    src="/delete.png"
-                                    alt=""
-                                    width={14}
-                                    height={14}
-                                  />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Additional Info */}
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-gray-500">Parent:</span>
-                                <p className="font-medium text-gray-700 truncate">
-                                  {student.parent
-                                    ? `${student.parent.name} ${student.parent.surname}`
-                                    : "Not assigned"}
-                                </p>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm text-gray-700">
+                                Guardian: {student.parent
+                                  ? `${student.parent.name} ${student.parent.surname}`
+                                  : "Not assigned"}
                               </div>
-                              <div>
-                                <span className="text-gray-500">Phone:</span>
-                                <p className="font-medium text-gray-700">
-                                  {student.phone || "Not provided"}
-                                </p>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleEditStudent(student)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-500 hover:bg-teal-600 transition-colors shadow-sm"
+                                >
+                                  <Image src="/update.png" alt="" width={14} height={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteClick(student)}
+                                  disabled={deleting === student.id}
+                                  className="w-8 h-8 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 transition-colors shadow-sm"
+                                >
+                                  {deleting === student.id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  ) : (
+                                    <Image src="/delete.png" alt="" width={14} height={14} />
+                                  )}
+                                </button>
                               </div>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
-
-                    {/* Class Summary Footer */}
-                    <div className="mt-6 pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <div className="flex items-center gap-4">
-                          <span>
-                            👥 Total Students:{" "}
-                            <strong>{classStudents.length}</strong>
-                          </span>
-                          <span>
-                            📧 With Email:{" "}
-                            <strong>
-                              {classStudents.filter((s) => s.email).length}
-                            </strong>
-                          </span>
-                          <span>
-                            👨‍👩‍👧‍👦 With Parents:{" "}
-                            <strong>
-                              {classStudents.filter((s) => s.parent).length}
-                            </strong>
-                          </span>
-                        </div>
-                        <button
-                          onClick={handleCreateStudent}
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
-                        >
-                          + Add Student to {className}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )
             )
           )}
         </div>
       ) : (
-        <>
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-white/20 overflow-hidden">
           <Table columns={columns} renderRow={renderRow} data={students} />
 
-          <div className="p-4 flex items-center justify-between text-gray-500">
+          {/* Pagination */}
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-t border-gray-200 flex items-center justify-between">
             <button
               disabled={currentPage <= 1}
-              className="py-2 px-4 rounded-md bg-slate-200 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               onClick={() => handlePageChange(currentPage - 1)}
             >
-              Prev
+              <span>← Previous</span>
             </button>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               {Array.from({ length: totalPages }, (_, index) => {
                 const pageIndex = index + 1;
                 return (
                   <button
                     key={pageIndex}
-                    className={`px-2 rounded-sm ${
-                      currentPage === pageIndex ? " bg-lamaSky" : ""
+                    className={`w-10 h-10 rounded-lg text-sm font-medium transition-all shadow-sm ${
+                      currentPage === pageIndex
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md transform scale-110"
+                        : "bg-white border border-gray-300 text-gray-700 hover:bg-indigo-50 hover:border-indigo-400"
                     }`}
                     onClick={() => handlePageChange(pageIndex)}
                   >
@@ -649,14 +559,14 @@ const StudentListPage = () => {
               })}
             </div>
             <button
-              className="py-2 px-4 rounded-md bg-slate-200 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               disabled={currentPage >= totalPages}
               onClick={() => handlePageChange(currentPage + 1)}
             >
-              Next
+              <span>Next →</span>
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {/* Student Form Modal */}

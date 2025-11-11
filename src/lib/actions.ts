@@ -16,6 +16,7 @@ import { hashPassword } from "./auth";
 export type CurrentState = {
   success: boolean;
   error: boolean;
+  message?: string;
   hasDependencies?: boolean;
   dependencyCount?: number;
   dependencyDetails?: string;
@@ -38,8 +39,18 @@ export const createSubject = async (
 
     revalidatePath("/list/subjects");
     return { success: true, error: false };
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
+    
+    // Handle unique constraint violation
+    if (err.code === 'P2002') {
+      return { 
+        success: false, 
+        error: true, 
+        message: `A subject with the name "${data.name}" already exists. Please use a different name.` 
+      };
+    }
+    
     return { success: false, error: true };
   }
 };
@@ -49,6 +60,16 @@ export const updateSubject = async (
   data: SubjectSchema
 ) => {
   try {
+    // Ensure we have an ID for updates
+    if (!data.id) {
+      console.error("No ID provided for subject update");
+      return { 
+        success: false, 
+        error: true, 
+        message: "Subject ID is required for update" 
+      };
+    }
+
     await prisma.subject.update({
       where: {
         id: data.id,
@@ -63,8 +84,18 @@ export const updateSubject = async (
 
     revalidatePath("/list/subjects");
     return { success: true, error: false };
-  } catch (err) {
-    console.log(err);
+  } catch (err: any) {
+    console.log("Error updating subject:", err);
+    
+    // Handle unique constraint violation
+    if (err.code === 'P2002') {
+      return { 
+        success: false, 
+        error: true, 
+        message: `A subject with the name "${data.name}" already exists. Please use a different name.` 
+      };
+    }
+    
     return { success: false, error: true };
   }
 };
@@ -94,11 +125,19 @@ export const createClass = async (
   data: ClassSchema
 ) => {
   try {
+    // Convert empty string supervisorId to null
+    const classData = {
+      ...data,
+      supervisorId: data.supervisorId && data.supervisorId.trim() !== "" 
+        ? data.supervisorId 
+        : null,
+    };
+
     await prisma.class.create({
-      data,
+      data: classData,
     });
 
-    revalidatePath("/list/classes");
+    revalidatePath("/list/classlist");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -111,17 +150,29 @@ export const updateClass = async (
   data: ClassSchema
 ) => {
   try {
+    console.log("Updating class with data:", data);
+    
+    // Convert empty string supervisorId to null
+    const supervisorId = data.supervisorId && data.supervisorId.trim() !== "" 
+      ? data.supervisorId 
+      : null;
+
     await prisma.class.update({
       where: {
         id: data.id,
       },
-      data,
+      data: {
+        name: data.name,
+        capacity: data.capacity,
+        gradeId: data.gradeId,
+        supervisorId: supervisorId,
+      },
     });
 
-    revalidatePath("/list/classes");
+    revalidatePath("/list/classlist");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.log("Update class error:", err);
     return { success: false, error: true };
   }
 };
@@ -1019,7 +1070,7 @@ export const createTimetable = async (
       },
     });
 
-    revalidatePath("/list/timetables");
+    revalidatePath("/admin/timetable");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -1044,7 +1095,7 @@ export const updateTimetable = async (
       },
     });
 
-    revalidatePath("/list/timetables");
+    revalidatePath("/admin/timetable");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -1058,13 +1109,66 @@ export const deleteTimetable = async (
 ) => {
   const id = data.get("id") as string;
   try {
-    await prisma.timetable.delete({
+    // Use transaction to ensure data consistency
+    await prisma.$transaction(async (tx) => {
+      // First, delete all timetable slots that reference this timetable
+      await tx.timetableSlot.deleteMany({
+        where: {
+          timetableId: parseInt(id),
+        },
+      });
+
+      // Then delete the timetable itself
+      await tx.timetable.delete({
+        where: {
+          id: parseInt(id),
+        },
+      });
+    });
+
+    revalidatePath("/admin/timetable");
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteEvent = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+
+  try {
+    await prisma.event.delete({
       where: {
         id: parseInt(id),
       },
     });
 
-    revalidatePath("/list/timetables");
+    revalidatePath("/admin/events");
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteAnnouncement = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+
+  try {
+    await prisma.announcement.delete({
+      where: {
+        id: parseInt(id),
+      },
+    });
+
+    revalidatePath("/admin/announcements");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);

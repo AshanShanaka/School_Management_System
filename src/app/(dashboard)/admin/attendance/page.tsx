@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ClassWiseAttendance from "@/components/ClassWiseAttendance";
+import AdminAttendanceReports from "@/components/AdminAttendanceReports";
 
 const AdminAttendancePage = async () => {
   const user = await getCurrentUser();
@@ -13,7 +13,9 @@ const AdminAttendancePage = async () => {
 
   return (
     <div className="p-4">
-      <ClassWiseAttendance />
+      <div className="max-w-7xl mx-auto">
+        <AdminAttendanceReports />
+      </div>
     </div>
   );
 };

@@ -23,7 +23,7 @@ const menuItems = [
         icon: "/teacher.png",
         label: "Teachers",
         href: "/list/teachers",
-        visible: ["admin", "teacher"],
+        visible: ["admin"],
         color: "text-purple-600",
         bgColor: "bg-purple-50",
       },
@@ -46,10 +46,18 @@ const menuItems = [
       {
         icon: "/class.png",
         label: "Classes",
-        href: "/list/classes",
+        href: "/list/classlist",
         visible: ["admin", "teacher"],
         color: "text-indigo-600",
         bgColor: "bg-indigo-50",
+      },
+      {
+        icon: "/class.png",
+        label: "Class Teachers",
+        href: "/list/class-teachers",
+        visible: ["admin"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
       },
     ],
   },
@@ -76,17 +84,9 @@ const menuItems = [
         icon: "/lesson.png",
         label: "Lessons",
         href: "/list/lessons",
-        visible: ["admin", "teacher"],
+        visible: ["teacher"],
         color: "text-rose-600",
         bgColor: "bg-rose-50",
-      },
-      {
-        icon: "/calendar.png",
-        label: "Timetable",
-        href: "/timetables",
-        visible: ["admin", "teacher", "student", "parent"],
-        color: "text-emerald-600",
-        bgColor: "bg-emerald-50",
       },
     ],
   },
@@ -102,10 +102,82 @@ const menuItems = [
         bgColor: "bg-red-50",
       },
       {
+        icon: "/class.png",
+        label: "My Class Teacher",
+        href: "/class-teacher",
+        visible: ["teacher"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+      },
+      {
+        icon: "/update.png",
+        label: "Marks Entry",
+        href: "/teacher/marks-entry",
+        visible: ["teacher"],
+        color: "text-indigo-600",
+        bgColor: "bg-indigo-50",
+      },
+      {
+        icon: "/result.png",
+        label: "Class Reports",
+        href: "/teacher/class-reports",
+        visible: ["teacher"],
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+      },
+      {
+        icon: "/profile.png",
+        label: "My Report Cards",
+        href: "/student/my-reports",
+        visible: ["student", "parent"],
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+      },
+      {
+        icon: "/result.png",
+        label: "Report Card",
+        href: "/student/report-card",
+        visible: ["student"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+      },
+      {
+        icon: "/result.png",
+        label: "Child's Report Card",
+        href: "/parent/report-card",
+        visible: ["parent"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+      },
+      {
+        icon: "/calendar.png",
+        label: "Teacher Meetings",
+        href: "/parent/meetings",
+        visible: ["parent"],
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+      },
+      {
+        icon: "/result.png",
+        label: "Student Report Card",
+        href: "/teacher/report-card",
+        visible: ["teacher"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+      },
+      {
+        icon: "/message.png",
+        label: "Messages",
+        href: "/messages",
+        visible: ["admin", "teacher", "student", "parent"],
+        color: "text-pink-600",
+        bgColor: "bg-pink-50",
+      },
+      {
         icon: "/assignment.png",
         label: "Assignments",
         href: "/list/assignments",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["teacher", "student", "parent"],
         color: "text-amber-600",
         bgColor: "bg-amber-50",
       },
@@ -121,9 +193,46 @@ const menuItems = [
         icon: "/attendance.png",
         label: "Attendance",
         href: "/admin/attendance",
-        visible: ["admin", "teacher"],
+        visible: ["admin"],
         color: "text-pink-600",
         bgColor: "bg-pink-50",
+      },
+      {
+        icon: "/attendance.png",
+        label: "Take Attendance",
+        href: "/teacher/take-attendance",
+        visible: ["teacher"],
+        color: "text-indigo-600",
+        bgColor: "bg-indigo-50",
+      },
+      {
+        icon: "/attendance.png",
+        label: "My Attendance",
+        href: "/student/my-attendance",
+        visible: ["student"],
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+      },
+    ],
+  },
+  {
+    title: "ANALYTICS",
+    items: [
+      {
+        icon: "/chart.png",
+        label: "AI Predictions",
+        href: "/admin/predictions",
+        visible: ["admin"],
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+      },
+      {
+        icon: "/chart.png",
+        label: "AI Predictions",
+        href: "/teacher/predictions",
+        visible: ["teacher"],
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
       },
     ],
   },
@@ -164,35 +273,7 @@ const menuItems = [
       },
     ],
   },
-  {
-    title: "SETTINGS",
-    items: [
-      {
-        icon: "/profile.png",
-        label: "Profile",
-        href: "/profile",
-        visible: ["admin", "teacher", "student", "parent"],
-        color: "text-gray-600",
-        bgColor: "bg-gray-50",
-      },
-      {
-        icon: "/setting.png",
-        label: "Settings",
-        href: "/settings",
-        visible: ["admin", "teacher", "student", "parent"],
-        color: "text-slate-600",
-        bgColor: "bg-slate-50",
-      },
-      {
-        icon: "/logout.png",
-        label: "Logout",
-        href: "/logout",
-        visible: ["admin", "teacher", "student", "parent"],
-        color: "text-red-600",
-        bgColor: "bg-red-50",
-      },
-    ],
-  },
+  // Removed SETTINGS section - Profile, Settings, Logout now in navbar dropdown
 ];
 
 const Menu = async () => {
@@ -248,13 +329,33 @@ const Menu = async () => {
       case "admin":
         return "/admin/attendance";
       case "teacher":
-        return "/teacher/attendance/timetable";
+        return "/teacher/attendance";
       case "student":
         return "/student/attendance";
       case "parent":
         return "/parent/attendance";
       default:
         return "/";
+    }
+  };
+
+  // Get role-specific events href
+  const getEventsHref = (userRole: string) => {
+    switch (userRole) {
+      case "admin":
+        return "/admin/events";
+      default:
+        return "/list/events";
+    }
+  };
+
+  // Get role-specific announcements href
+  const getAnnouncementsHref = (userRole: string) => {
+    switch (userRole) {
+      case "admin":
+        return "/admin/announcements";
+      default:
+        return "/list/announcements";
     }
   };
 
@@ -268,6 +369,26 @@ const Menu = async () => {
             return {
               ...item,
               href: getAttendanceHref(role),
+            };
+          }
+          return item;
+        }),
+      };
+    }
+    if (section.title === "TOOLS") {
+      return {
+        ...section,
+        items: section.items.map((item) => {
+          if (item.label === "Events") {
+            return {
+              ...item,
+              href: getEventsHref(role),
+            };
+          }
+          if (item.label === "Announcements") {
+            return {
+              ...item,
+              href: getAnnouncementsHref(role),
             };
           }
           return item;

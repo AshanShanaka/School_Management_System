@@ -3,7 +3,7 @@ import DashboardCard from "@/components/DashboardCard";
 import QuickActionCard from "@/components/QuickActionCard";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { formatClassDisplay } from "@/lib/formatters";
+import { formatClassName } from "@/lib/formatClassName";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -38,11 +38,8 @@ const ParentPage = async () => {
     },
     include: {
       student: true,
-      lesson: {
-        include: {
-          subject: true,
-        },
-      },
+      class: true,
+      teacher: true,
     },
     orderBy: { date: "desc" },
     take: 10,
@@ -51,11 +48,17 @@ const ParentPage = async () => {
   // Get upcoming exams for children
   const upcomingExams = await prisma.exam.findMany({
     where: {
-      startTime: {
-        gte: new Date(),
+      publishedAt: {
+        not: null,
       },
+      status: "PUBLISHED",
     },
-    orderBy: { startTime: "asc" },
+    include: {
+      grade: true,
+      class: true,
+      examType: true,
+    },
+    orderBy: { createdAt: "desc" },
     take: 5,
   });
 
@@ -146,7 +149,7 @@ const ParentPage = async () => {
           title="Timetable"
           description="Check class schedules"
           icon="/calendar.png"
-          href="/list/timetables"
+          href="/parent/timetable"
           bgColor="bg-white"
           iconBgColor="bg-purple-100"
         />
@@ -211,11 +214,7 @@ const ParentPage = async () => {
                         {student.name} {student.surname}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {formatClassDisplay(
-                          student.class.name,
-                          student.class.grade.level
-                        )}{" "}
-                        - Grade {student.class.grade.level}
+                        {formatClassName(student.class.name)} - Grade {student.class.grade.level}
                       </p>
                       <p className="text-xs text-gray-500">
                         Student ID: {student.id}
@@ -271,7 +270,7 @@ const ParentPage = async () => {
                       {attendance.student.name} {attendance.student.surname}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {attendance.lesson.subject.name}
+                      {formatClassName(attendance.class.name)}
                     </div>
                     <div className="text-xs text-gray-500">
                       {attendance.date.toLocaleDateString()}
@@ -338,8 +337,8 @@ const ParentPage = async () => {
                 <div className="font-medium text-gray-800">{exam.title}</div>
                 <div className="text-sm text-gray-600 mb-2">Exam</div>
                 <div className="text-sm text-blue-600 font-medium">
-                  {exam.startTime.toLocaleDateString()} at{" "}
-                  {exam.startTime.toLocaleTimeString("en-US", {
+                  {exam.publishedAt?.toLocaleDateString() || "Not scheduled"} {exam.publishedAt && "at"}{" "}
+                  {exam.publishedAt?.toLocaleTimeString("en-US", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}

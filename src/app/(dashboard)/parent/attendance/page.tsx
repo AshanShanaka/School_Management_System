@@ -126,7 +126,7 @@ const ParentAttendancePage = async ({
             <h1 className="text-2xl font-bold">Child's Attendance</h1>
             <p className="text-gray-500 mt-1">
               {selectedChild.name} {selectedChild.surname} - Class{" "}
-              {selectedChild.class.grade.level}-{selectedChild.class.name}
+              {selectedChild.class.name}
             </p>
           </div>
           <div className="text-right">
@@ -187,7 +187,7 @@ const ParentAttendancePage = async ({
                 >
                   {child.name} {child.surname}
                   <span className="text-xs block">
-                    Class {child.class.grade.level}-{child.class.name}
+                    Class {child.class.name}
                   </span>
                 </Link>
               ))}
@@ -341,7 +341,7 @@ const ParentAttendancePage = async ({
         {/* Quick Actions */}
         <div className="mt-6 flex gap-4">
           <Link
-            href="/list/timetables"
+            href="/parent/timetable"
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             View Child's Timetable

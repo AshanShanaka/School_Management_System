@@ -1,166 +1,151 @@
 "use client";
 
-import { 
-  SCHOOL_CONFIG, 
-  PERIOD_TIMES, 
-  DAYS_CONFIG, 
-  getSubjectColor, 
-  formatTime 
-} from "@/lib/modernTimetableConfig";
-import { formatClassDisplay } from "@/lib/formatters";
-import { Clock, Calendar, Users, BookOpen } from "lucide-react";
+import React from "react";
+import Image from "next/image";
 
 interface TimetableViewProps {
-  timetable: {
-    id: number;
-    name: string;
-    academicYear: string;
-    class: {
-      name: string;
-      grade: { level: number };
-    };
-    slots: Array<{
-      day: string;
-      period: number;
-      startTime: string;
-      endTime: string;
-      isBreak: boolean;
-      subject?: { name: string } | null;
-      teacher?: { name: string; surname: string } | null;
-    }>;
-  };
+  classId?: number;
+  readonly?: boolean;
+  timetable?: any;
   userRole?: string;
 }
 
-const TimetableView = ({ timetable, userRole }: TimetableViewProps) => {
-  const getSlotForDayAndPeriod = (day: string, period: number) => {
-    return timetable.slots.find(
-      (slot) => slot.day === day && slot.period === period
-    );
-  };
-
-  const getSlotContent = (slot: any, isBreak: boolean) => {
-    if (isBreak) {
-      return (
-        <div className="h-full flex items-center justify-center bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-700 text-sm font-medium rounded-lg">
-          <Clock className="w-4 h-4 mr-1" />
-          BREAK
-        </div>
-      );
-    }
-
-    if (slot?.subject) {
-      const color = getSubjectColor(slot.subject.name);
-      return (
-        <div
-          className="h-full p-2 rounded-lg text-white text-sm relative"
-          style={{ backgroundColor: color }}
-        >
-          <div className="font-semibold text-xs truncate">
-            {slot.subject.name}
-          </div>
-          {slot.teacher && (
-            <div className="text-xs opacity-90 truncate">
-              {slot.teacher.name} {slot.teacher.surname}
-            </div>
-          )}
-        </div>
-      );
-    }
-
+const TimetableView: React.FC<TimetableViewProps> = ({
+  classId,
+  readonly = false,
+  timetable,
+  userRole,
+}) => {
+  if (!timetable) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50 text-gray-400 text-xs rounded-lg border-2 border-dashed border-gray-200">
-        Free Period
+      <div className="p-6 bg-white rounded-lg shadow-sm">
+        <h3 className="text-lg font-semibold mb-4">Timetable View</h3>
+        <p className="text-gray-600">
+          {classId ? `No timetable found for class ${classId}` : 'Select a class to view timetable'}
+        </p>
       </div>
     );
+  }
+
+  // Days of the week
+  const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+  
+  // Time slots (assuming 8 periods)
+  const periods = Array.from({ length: 8 }, (_, i) => i + 1);
+
+  // Create a grid structure for the timetable
+  const createTimetableGrid = () => {
+    const grid: { [key: string]: any } = {};
+    
+    // Initialize grid
+    days.forEach(day => {
+      grid[day] = {};
+      periods.forEach(period => {
+        grid[day][period] = null;
+      });
+    });
+    
+    // Fill grid with slots
+    timetable.slots?.forEach((slot: any) => {
+      if (grid[slot.day]) {
+        grid[slot.day][slot.period] = slot;
+      }
+    });
+    
+    return grid;
+  };
+
+  const timetableGrid = createTimetableGrid();
+
+  // Get time for period
+  const getTimeForPeriod = (period: number) => {
+    const startHour = 8 + Math.floor((period - 1) / 2);
+    const startMinute = (period - 1) % 2 === 0 ? 0 : 30;
+    const endHour = startHour + (startMinute === 30 ? 1 : 0);
+    const endMinute = startMinute === 30 ? 0 : 30;
+    
+    return `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')} - ${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header - Modern Design */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-6">
-        <div className="flex justify-between items-start">
+    <div className="bg-white rounded-lg shadow-sm">
+      {/* Compact Header */}
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">
-              Class {timetable.class.name} Timetable
-            </h1>
-            <div className="flex items-center space-x-6 text-blue-100">
-              <div className="flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                Grade {timetable.class.grade.level}
-              </div>
-              <div className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2" />
-                {timetable.academicYear} Academic Year
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                {formatTime(SCHOOL_CONFIG.startTime)} -{" "}
-                {formatTime(SCHOOL_CONFIG.endTime)}
-              </div>
+            <h3 className="text-xl font-bold text-gray-900">{timetable.name}</h3>
+            <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                🎓 Grade {timetable.class?.grade?.level}-{timetable.class?.name}
+              </span>
+              <span>📅 {timetable.academicYear}</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                timetable.isActive 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {timetable.isActive ? 'Active' : 'Inactive'}
+              </span>
             </div>
           </div>
-          
-          {userRole && (
-            <div className="bg-white/20 rounded-lg px-4 py-2">
-              <div className="text-sm font-medium capitalize">{userRole} View</div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Timetable Grid - Compact Excel-like Design */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] table-fixed">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-32 border-r border-gray-200">
-                  Period / Day
-                </th>
-                {SCHOOL_CONFIG.workingDays.map((day) => (
-                  <th
-                    key={day}
-                    className="px-2 py-3 text-center text-sm font-semibold text-gray-900 border-r border-gray-200 last:border-r-0"
-                  >
-                    <div className="font-bold">{DAYS_CONFIG[day].name}</div>
-                    <div className="text-xs font-normal text-gray-600">
-                      {DAYS_CONFIG[day].shortName}
-                    </div>
+      {/* Compact Timetable Grid */}
+      <div className="p-4">
+        <div className="overflow-x-auto border rounded-lg">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gradient-to-r from-violet-50 to-purple-50">
+                <th className="p-2 text-left font-semibold text-gray-700 border-r text-xs">Time</th>
+                {days.map(day => (
+                  <th key={day} className="p-2 text-center font-semibold text-gray-700 border-r last:border-r-0 text-xs">
+                    {day.slice(0, 3)}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {PERIOD_TIMES.map((periodConfig, index) => (
-                <tr
-                  key={periodConfig.period}
-                  className={`border-t border-gray-200 hover:bg-gray-50/30 ${
-                    index % 2 === 0 ? "bg-gray-50/20" : ""
-                  }`}
-                >
-                  <td className="px-4 py-2 bg-gray-50 border-r border-gray-200">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {periodConfig.isBreak
-                        ? "🕐 Break"
-                        : `📚 Period ${periodConfig.period}`}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-0.5">
-                      {formatTime(periodConfig.startTime)} -{" "}
-                      {formatTime(periodConfig.endTime)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      ({periodConfig.isBreak ? "20" : "45"} min)
+              {periods.map(period => (
+                <tr key={period} className="border-b hover:bg-violet-25 transition-colors">
+                  <td className="p-2 border-r bg-gradient-to-r from-gray-50 to-gray-100 font-medium text-gray-700 text-xs">
+                    <div className="text-center">
+                      <div className="font-bold text-gray-900">P{period}</div>
+                      <div className="text-xs text-gray-500">{getTimeForPeriod(period).split(' - ')[0]}</div>
                     </div>
                   </td>
-                  {SCHOOL_CONFIG.workingDays.map((day) => {
-                    const slot = getSlotForDayAndPeriod(day, periodConfig.period);
-
+                  {days.map(day => {
+                    const slot = timetableGrid[day][period];
                     return (
-                      <td key={day} className="px-2 py-1 border-r border-gray-200 last:border-r-0">
-                        <div className="h-16">
-                          {getSlotContent(slot, periodConfig.isBreak)}
-                        </div>
+                      <td key={`${day}-${period}`} className="p-1 border-r last:border-r-0 h-16">
+                        {slot ? (
+                          <div className={`h-full rounded-md p-2 text-center transition-all duration-200 ${
+                            slot.isBreak 
+                              ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 border border-yellow-300' 
+                              : 'bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200 hover:from-violet-100 hover:to-purple-100'
+                          }`}>
+                            {slot.isBreak ? (
+                              <div className="flex flex-col justify-center h-full">
+                                <span className="font-semibold text-yellow-800 text-xs">Break</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col justify-center h-full">
+                                <span className="font-bold text-violet-900 text-xs leading-tight">
+                                  {slot.subject?.name || 'No Subject'}
+                                </span>
+                                {slot.teacher && (
+                                  <span className="text-xs text-violet-700 truncate">
+                                    {slot.teacher.name.charAt(0)}.{slot.teacher.surname}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="h-full rounded-md border border-dashed border-gray-200 flex items-center justify-center hover:border-gray-300 transition-colors">
+                            <span className="text-xs text-gray-400">Free</span>
+                          </div>
+                        )}
                       </td>
                     );
                   })}
@@ -169,93 +154,34 @@ const TimetableView = ({ timetable, userRole }: TimetableViewProps) => {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            Total Subjects
-          </h3>
-          <p className="text-3xl font-bold text-blue-600">
-            {Array.from(new Set(timetable.slots.filter(s => s.subject).map(s => s.subject!.name))).length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            Filled Periods
-          </h3>
-          <p className="text-3xl font-bold text-green-600">
-            {timetable.slots.filter(s => s.subject && !s.isBreak).length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            Free Periods
-          </h3>
-          <p className="text-3xl font-bold text-purple-600">
-            {timetable.slots.filter(s => !s.subject && !s.isBreak).length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            Weekly Hours
-          </h3>
-          <p className="text-3xl font-bold text-orange-600">
-            {Math.round((timetable.slots.filter(s => s.subject && !s.isBreak).length * 45) / 60)}h
-          </p>
-        </div>
-      </div>
-
-      {/* Subjects Legend */}
-      {timetable.slots.some((slot) => slot.subject) && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <BookOpen className="w-5 h-5 mr-2" />
-            Subject Overview
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {Array.from(
-              new Set(
-                timetable.slots
-                  .filter((slot) => slot.subject)
-                  .map((slot) => slot.subject!.name)
-              )
-            ).map((subjectName) => {
-              const subjectSlots = timetable.slots.filter(
-                (slot) => slot.subject?.name === subjectName
-              );
-              const teacher = subjectSlots[0]?.teacher;
-              const color = getSubjectColor(subjectName);
-
-              return (
-                <div
-                  key={subjectName}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
-                >
-                  <div 
-                    className="w-4 h-4 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: color }}
-                  ></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 text-sm truncate">
-                      {subjectName}
-                    </div>
-                    {teacher && (
-                      <div className="text-xs text-gray-600 truncate">
-                        {teacher.name} {teacher.surname}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    {subjectSlots.length}p/w
-                  </div>
-                </div>
-              );
-            })}
+        {/* Compact Statistics */}
+        <div className="mt-4 grid grid-cols-4 gap-3">
+          <div className="bg-gradient-to-br from-violet-50 to-violet-100 p-3 rounded-lg border border-violet-200 text-center">
+            <div className="text-lg font-bold text-violet-700">{timetable.slots?.filter((s: any) => !s.isBreak).length || 0}</div>
+            <div className="text-xs text-gray-600">Periods</div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 rounded-lg border border-emerald-200 text-center">
+            <div className="text-lg font-bold text-emerald-700">
+              {new Set(timetable.slots?.filter((s: any) => s.subjectId).map((s: any) => s.subjectId)).size || 0}
+            </div>
+            <div className="text-xs text-gray-600">Subjects</div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200 text-center">
+            <div className="text-lg font-bold text-blue-700">
+              {new Set(timetable.slots?.filter((s: any) => s.teacherId).map((s: any) => s.teacherId)).size || 0}
+            </div>
+            <div className="text-xs text-gray-600">Teachers</div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-3 rounded-lg border border-yellow-200 text-center">
+            <div className="text-lg font-bold text-yellow-700">{timetable.slots?.filter((s: any) => s.isBreak).length || 0}</div>
+            <div className="text-xs text-gray-600">Breaks</div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

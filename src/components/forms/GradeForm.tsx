@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import { gradeSchema, GradeSchema } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/hooks/useFormState";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -27,8 +27,24 @@ const GradeForm = ({
     resolver: zodResolver(gradeSchema),
   });
 
+  // Wrapper functions to handle FormData conversion
+  const createGradeAction = async (state: any, formData: FormData) => {
+    const data = {
+      level: parseInt(formData.get("level") as string),
+    };
+    return await createGrade(state, data);
+  };
+
+  const updateGradeAction = async (state: any, formData: FormData) => {
+    const data = {
+      id: parseInt(formData.get("id") as string),
+      level: parseInt(formData.get("level") as string),
+    };
+    return await updateGrade(state, data);
+  };
+
   const [state, formAction] = useFormState(
-    type === "create" ? createGrade : updateGrade,
+    type === "create" ? createGradeAction : updateGradeAction,
     {
       success: false,
       error: false,
@@ -36,7 +52,12 @@ const GradeForm = ({
   );
 
   const onSubmit = handleSubmit((data) => {
-    formAction(data);
+    const formData = new FormData();
+    formData.append("level", data.level?.toString() || "");
+    if (data.id) {
+      formData.append("id", data.id.toString());
+    }
+    formAction(formData);
   });
 
   const router = useRouter();

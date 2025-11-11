@@ -86,7 +86,7 @@ Dear ${student.parent.name} ${student.parent.surname},
 
 This is an automated attendance alert for your child ${student.name} ${
       student.surname
-    } in Grade ${student.class.grade.level}-${student.class.name}.
+    } in Grade ${student.class.name}.
 
 Attendance Summary (Last 30 days):
 - Total Days: ${totalDays}

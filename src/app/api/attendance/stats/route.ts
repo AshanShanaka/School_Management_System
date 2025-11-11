@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
           absentToday: isPresent ? 0 : 1,
           lateToday: isLate ? 1 : 0,
           monthlyAttendanceRate: monthlyRate,
-          className: `${student.class.grade.level}-${student.class.name}`,
+          className: student.class.name,
         },
       });
     } else if (role === "parent") {
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
           return {
             studentId: child.id,
             studentName: `${child.name} ${child.surname}`,
-            className: `${child.class.grade.level}-${child.class.name}`,
+            className: child.class.name,
             presentToday: isPresent ? 1 : 0,
             absentToday: isPresent ? 0 : 1,
             lateToday: isLate ? 1 : 0,

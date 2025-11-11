@@ -11,7 +11,7 @@ import {
   teacherSchema,
   TeacherSchema,
 } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/hooks/useFormState";
 import {
   createStudent,
   createTeacher,
@@ -52,8 +52,49 @@ const StudentForm = ({
   const [img, setImg] = useState<any>();
   const [password, setPassword] = useState("");
 
+  // Wrapper functions to handle FormData conversion
+  const createStudentAction = async (state: any, formData: FormData) => {
+    const data = {
+      id: formData.get("id") as string,
+      username: formData.get("username") as string,
+      password: formData.get("password") as string,
+      name: formData.get("name") as string,
+      surname: formData.get("surname") as string,
+      email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
+      address: formData.get("address") as string,
+      img: formData.get("img") as string,
+      birthday: new Date(formData.get("birthday") as string),
+      sex: formData.get("sex") as "MALE" | "FEMALE",
+      gradeId: parseInt(formData.get("gradeId") as string),
+      classId: parseInt(formData.get("classId") as string),
+      parentId: formData.get("parentId") as string,
+    };
+    return await createStudent(state, data);
+  };
+
+  const updateStudentAction = async (state: any, formData: FormData) => {
+    const data = {
+      id: formData.get("id") as string,
+      username: formData.get("username") as string,
+      password: formData.get("password") as string,
+      name: formData.get("name") as string,
+      surname: formData.get("surname") as string,
+      email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
+      address: formData.get("address") as string,
+      img: formData.get("img") as string,
+      birthday: new Date(formData.get("birthday") as string),
+      sex: formData.get("sex") as "MALE" | "FEMALE",
+      gradeId: parseInt(formData.get("gradeId") as string),
+      classId: parseInt(formData.get("classId") as string),
+      parentId: formData.get("parentId") as string,
+    };
+    return await updateStudent(state, data);
+  };
+
   const [state, formAction] = useFormState(
-    type === "create" ? createStudent : updateStudent,
+    type === "create" ? createStudentAction : updateStudentAction,
     {
       success: false,
       error: false,
@@ -61,9 +102,19 @@ const StudentForm = ({
   );
 
   const onSubmit = handleSubmit((data) => {
-    console.log("hello");
-    console.log(data);
-    formAction({ ...data, img: img?.secure_url });
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+    
+    // Add the image URL if available
+    if (img?.secure_url) {
+      formData.append("img", img.secure_url);
+    }
+    
+    formAction(formData);
   });
 
   const router = useRouter();
@@ -88,22 +139,23 @@ const StudentForm = ({
       </span>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          label="Username"
+          label="Student Email"
+          name="email"
+          type="email"
+          defaultValue={data?.email}
+          register={register}
+          error={errors?.email}
+        />
+        <InputField
+          label="Student Username"
           name="username"
           defaultValue={data?.username}
           register={register}
           error={errors?.username}
         />
-        <InputField
-          label="Email"
-          name="email"
-          defaultValue={data?.email}
-          register={register}
-          error={errors?.email}
-        />
         <div className="flex flex-col gap-2">
           <InputField
-            label="Password"
+            label="Student Password"
             name="password"
             type="password"
             defaultValue={data?.password}
@@ -115,7 +167,7 @@ const StudentForm = ({
         </div>
       </div>
       <span className="text-xs text-gray-400 font-medium">
-        Personal Information
+        Student Information
       </span>
       <CldUploadWidget
         uploadPreset="school"
@@ -135,65 +187,36 @@ const StudentForm = ({
       </CldUploadWidget>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          label="First Name"
+          label="Student First Name"
           name="name"
           defaultValue={data?.name}
           register={register}
           error={errors.name}
         />
         <InputField
-          label="Last Name"
+          label="Student Last Name"
           name="surname"
           defaultValue={data?.surname}
           register={register}
           error={errors.surname}
         />
         <InputField
-          label="Phone"
+          label="Student Phone"
           name="phone"
           defaultValue={data?.phone}
           register={register}
           error={errors.phone}
         />
         <InputField
-          label="Address"
-          name="address"
-          defaultValue={data?.address}
-          register={register}
-          error={errors.address}
-        />
-        <InputField
-          label="Birthday"
+          label="Student Birthday"
           name="birthday"
-          defaultValue={data?.birthday.toISOString().split("T")[0]}
+          defaultValue={data?.birthday?.toISOString().split("T")[0]}
           register={register}
           error={errors.birthday}
           type="date"
         />
         <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Parent</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("parentId")}
-            defaultValue={data?.parentId || ""}
-          >
-            <option value="">Select a parent</option>
-            {parents.map(
-              (parent: { id: string; name: string; surname: string }) => (
-                <option value={parent.id} key={parent.id}>
-                  {parent.name + " " + parent.surname}
-                </option>
-              )
-            )}
-          </select>
-          {errors.parentId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.parentId.message.toString()}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Sex</label>
+          <label className="text-xs text-gray-500">Student Sex</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("sex")}
@@ -208,8 +231,15 @@ const StudentForm = ({
             </p>
           )}
         </div>
+        <InputField
+          label="Address"
+          name="address"
+          defaultValue={data?.address}
+          register={register}
+          error={errors.address}
+        />
         <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Grade</label>
+          <label className="text-xs text-gray-500">Student Grade</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("gradeId")}
@@ -228,7 +258,7 @@ const StudentForm = ({
           )}
         </div>
         <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Class</label>
+          <label className="text-xs text-gray-500">Student Class</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("classId")}
@@ -252,6 +282,28 @@ const StudentForm = ({
           {errors.classId?.message && (
             <p className="text-xs text-red-400">
               {errors.classId.message.toString()}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Parent</label>
+          <select
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("parentId")}
+            defaultValue={data?.parentId || ""}
+          >
+            <option value="">Select a parent</option>
+            {parents.map(
+              (parent: { id: string; name: string; surname: string }) => (
+                <option value={parent.id} key={parent.id}>
+                  {parent.name + " " + parent.surname}
+                </option>
+              )
+            )}
+          </select>
+          {errors.parentId?.message && (
+            <p className="text-xs text-red-400">
+              {errors.parentId.message.toString()}
             </p>
           )}
         </div>

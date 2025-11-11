@@ -8,145 +8,169 @@ datasource db {
 }
 
 model Admin {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
+  id        String         @id @default(cuid())
+  username  String         @unique
+  createdAt DateTime       @default(now())
+  email     String         @unique
   name      String
+  password  String
   surname   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime       @updatedAt
+  workflows ExamWorkflow[]
+  reportCardApprovals ReportCard[]
+  reportWorkflowApprovals ReportWorkflow[]
 }
 
 model Student {
-  id          String       @id @default(cuid())
-  username    String       @unique
-  email       String?      @unique
-  password    String
-  name        String
-  surname     String
-  phone       String?      @unique
-  address     String
-  img         String?
-  bloodType   String?
-  sex         UserSex
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  parentId    String
-  parent      Parent       @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  classId     Int
-  class       Class        @relation(fields: [classId], references: [id])
-  gradeId     Int
-  grade       Grade        @relation(fields: [gradeId], references: [id])
-  attendances Attendance[]
-  results     Result[]
-  birthday    DateTime
+  id             String          @id @default(cuid())
+  username       String          @unique
+  name           String
+  surname        String
+  email          String?         @unique
+  phone          String?         @unique
+  address        String
+  img            String?
+  sex            UserSex
+  createdAt      DateTime        @default(now())
+  parentId       String
+  classId        Int
+  gradeId        Int
+  birthday       DateTime
+  bloodType      String?
+  password       String
+  updatedAt      DateTime        @updatedAt
+  attendances    Attendance[]
+  examResults    ExamResult[]
+  examSummaries  ExamSummary[]
+  results        Result[]
+  reportCards    ReportCard[]
+  parentMeetings ParentMeeting[] // Meetings involving this student
+  class          Class           @relation(fields: [classId], references: [id])
+  grade          Grade           @relation(fields: [gradeId], references: [id])
+  parent         Parent          @relation(fields: [parentId], references: [id], onDelete: Cascade)
 }
 
 model Teacher {
-  id                 String              @id @default(cuid())
-  username           String              @unique
-  email              String?             @unique
-  password           String
-  name               String
-  surname            String
-  phone              String?             @unique
-  address            String
-  img                String?
-  bloodType          String?
-  sex                UserSex
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  subjects           Subject[]
-  lessons            Lesson[]
-  classes            Class[]
-  birthday           DateTime
-  Exam               Exam[]
-  timetableSlots     TimetableSlot[]
-  subjectAssignments SubjectAssignment[]
+  id                     String                  @id @default(cuid())
+  username               String                  @unique
+  name                   String
+  surname                String
+  email                  String?                 @unique
+  phone                  String?                 @unique
+  address                String
+  img                    String?
+  sex                    UserSex
+  createdAt              DateTime                @default(now())
+  birthday               DateTime
+  bloodType              String?
+  password               String
+  updatedAt              DateTime                @updatedAt
+  assignedClassId        Int?                    @unique // 1-to-1: Teacher can be class teacher for only one class
+  classes                Class[]                 @relation("TeacherSupervisedClasses")
+  assignedClass          Class?                  @relation("ClassTeacherAssignment", fields: [assignedClassId], references: [id])
+  examSubjects           ExamSubject[]
+  examSupervisors        ExamSupervisor[]
+  lessons                Lesson[]
+  subjects               Subject[]               @relation("SubjectToTeacher")
+  workflows              ExamWorkflow[]
+  reportWorkflows        ReportWorkflow[]
+  attendanceMarked       Attendance[]            @relation("AttendanceMarkedBy")
+  classTeacherAssignments ClassTeacherAssignment[] // History of assignments
+  parentMeetings         ParentMeeting[]         // Meetings scheduled by class teacher
+  classAnnouncements     ClassAnnouncement[]     // Announcements created by class teacher
+  sentMessages           ClassTeacherMessage[]   @relation("SentMessages") // Messages sent to parents
+  timetableSlots         TimetableSlot[]         @relation("TimetableSlots") // Timetable slots assigned to teacher
 }
 
 model Parent {
-  id        String    @id @default(cuid())
-  username  String    @unique
-  email     String?   @unique
-  password  String
-  name      String
-  surname   String
-  phone     String    @unique
-  address   String
-  img       String?
-  sex       UserSex
-  birthday  DateTime
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  students  Student[]
+  id                    String                @id @default(cuid())
+  username              String                @unique
+  name                  String
+  surname               String
+  email                 String?               @unique
+  phone                 String                @unique
+  address               String
+  createdAt             DateTime              @default(now())
+  birthday              DateTime
+  img                   String?
+  sex                   UserSex
+  password              String
+  updatedAt             DateTime              @updatedAt
+  students              Student[]
+  parentMeetings        ParentMeeting[]       // Meetings with class teacher
+  receivedMessages      ClassTeacherMessage[] // Messages from class teacher
 }
 
 model Session {
   id        String   @id @default(cuid())
   token     String   @unique
   userId    String
-  userType  String // 'admin', 'teacher', 'student', 'parent'
+  userType  String
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Grade {
-  id    Int @id @default(autoincrement())
-  level Int @unique
-
-  students Student[]
-  classess Class[]
+  id                 Int                 @id @default(autoincrement())
+  level              Int                 @unique
+  classess           Class[]
+  exams              Exam[]
+  students           Student[]
+  gradeScales        GradeScale[]
 }
 
 model Class {
-  id       Int    @id @default(autoincrement())
-  name     String @unique
-  capacity Int
-
-  supervisorId       String?
-  supervisor         Teacher?            @relation(fields: [supervisorId], references: [id])
-  lessons            Lesson[]
-  students           Student[]
-  gradeId            Int
-  grade              Grade               @relation(fields: [gradeId], references: [id])
-  events             Event[]
-  announcements      Announcement[]
-  timetables         Timetable[]
-  specialDays        SpecialDay[]
-  subjectAssignments SubjectAssignment[]
+  id                    Int                     @id @default(autoincrement())
+  name                  String                  @unique
+  capacity              Int
+  gradeId               Int
+  supervisorId          String?                 // Legacy field (kept for subject teachers)
+  classTeacherId        String?                 @unique // 1-to-1: Each class has exactly one class teacher
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  grade                 Grade                   @relation(fields: [gradeId], references: [id])
+  supervisor            Teacher?                @relation("TeacherSupervisedClasses", fields: [supervisorId], references: [id])
+  classTeacher          Teacher?                @relation("ClassTeacherAssignment")
+  students              Student[]
+  lessons               Lesson[]
+  events                Event[]
+  announcements         Announcement[]
+  exams                 Exam[]
+  workflows             ExamWorkflow[]
+  examSupervisors       ExamSupervisor[]
+  attendance            Attendance[]
+  reportCards           ReportCard[]
+  reportWorkflows       ReportWorkflow[]
+  schoolTimetable       SchoolTimetable?        // One timetable per class
 }
 
 model Subject {
   id                 Int                 @id @default(autoincrement())
   name               String              @unique
-  code               String?             @unique // Subject code like "MATH101"
-  color              String? // Hex color for UI display
-  teachers           Teacher[]
+  code               String?             @unique
+  color              String?
+  isOLSubject        Boolean             @default(false)
+  examSubjects       ExamSubject[]
   lessons            Lesson[]
-  Exam               Exam[]
-  timetableSlots     TimetableSlot[]
-  subjectAssignments SubjectAssignment[]
+  teachers           Teacher[]           @relation("SubjectToTeacher")
+  reportCardSubjects ReportCardSubject[]
+  timetableSlots     TimetableSlot[]     // Slots where this subject is taught
 }
 
 model Lesson {
-  id        Int      @id @default(autoincrement())
-  name      String
-  day       Day
-  startTime DateTime
-  endTime   DateTime
-
+  id          Int          @id @default(autoincrement())
+  name        String
+  day         Day
+  startTime   DateTime
+  endTime     DateTime
   subjectId   Int
-  subject     Subject      @relation(fields: [subjectId], references: [id])
   classId     Int
-  class       Class        @relation(fields: [classId], references: [id])
   teacherId   String
-  teacher     Teacher      @relation(fields: [teacherId], references: [id])
-  exams       Exam[]
   assignments Assignment[]
-  attendances Attendance[]
+  class       Class        @relation(fields: [classId], references: [id])
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
 }
 
 model ExamType {
@@ -156,24 +180,111 @@ model ExamType {
 }
 
 model Exam {
-  id          Int      @id @default(autoincrement())
-  title       String
-  startTime   DateTime
-  endTime     DateTime
-  duration    String
-  venue       String?
-  supervisor  String?
-  day         Day?
-  subjectCode String?
-  examTypeId  Int
-  examType    ExamType @relation(fields: [examTypeId], references: [id])
-  results     Result[]
-  Teacher     Teacher? @relation(fields: [teacherId], references: [id])
-  teacherId   String?
-  Subject     Subject? @relation(fields: [subjectId], references: [id])
-  subjectId   Int?
-  Lesson      Lesson?  @relation(fields: [lessonId], references: [id])
-  lessonId    Int?
+  id                 Int              @id @default(autoincrement())
+  title              String
+  examTypeId         Int?
+  createdAt          DateTime         @default(now())
+  examTypeEnum       ExamTypeEnum
+  gradeId            Int
+  publishedAt        DateTime?
+  status             ExamStatus       @default(DRAFT)
+  term               Int
+  updatedAt          DateTime         @updatedAt
+  year               Int
+  classId            Int?
+  marksEntryDeadline DateTime?
+  reviewDeadline     DateTime?
+  examType           ExamType?        @relation(fields: [examTypeId], references: [id])
+  grade              Grade            @relation(fields: [gradeId], references: [id])
+  class              Class?           @relation(fields: [classId], references: [id])
+  results            ExamResult[]
+  examSubjects       ExamSubject[]
+  examSummaries      ExamSummary[]
+  gradeBands         GradeBand[]
+  workflows          ExamWorkflow[]
+  examSupervisors    ExamSupervisor[]
+  reportCards        ReportCard[]
+  reportWorkflows    ReportWorkflow[]
+
+  @@unique([year, term, gradeId, examTypeEnum])
+}
+
+model ExamSubject {
+  id             Int          @id @default(autoincrement())
+  examId         Int
+  subjectId      Int
+  teacherId      String?
+  maxMarks       Int          @default(100)
+  marksEntered   Boolean      @default(false)
+  marksEnteredAt DateTime?
+  marksEnteredBy String?
+  examDate       DateTime?
+  startTime      String?
+  endTime        String?
+  subjectResults ExamResult[]
+  exam           Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subject        Subject      @relation(fields: [subjectId], references: [id])
+  teacher        Teacher?     @relation(fields: [teacherId], references: [id])
+
+  @@unique([examId, subjectId])
+}
+
+model ExamSupervisor {
+  id        Int     @id @default(autoincrement())
+  examId    Int
+  classId   Int
+  teacherId String
+  createdAt DateTime @default(now())
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id])
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@unique([examId, classId, teacherId])
+}
+
+model ExamResult {
+  id            Int         @id @default(autoincrement())
+  marks         Int
+  grade         String?
+  examId        Int
+  examSubjectId Int
+  studentId     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  exam          Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examSubject   ExamSubject @relation(fields: [examSubjectId], references: [id], onDelete: Cascade)
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examSubjectId, studentId])
+}
+
+model ExamSummary {
+  id            Int      @id @default(autoincrement())
+  examId        Int
+  studentId     String
+  totalMarks    Int
+  totalMaxMarks Int
+  percentage    Float
+  average       Float
+  overallGrade  String
+  classRank     Int
+  classSize     Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+}
+
+model GradeBand {
+  id          Int     @id @default(autoincrement())
+  grade       String  @unique
+  minPercent  Float
+  maxPercent  Float
+  description String?
+  Exam        Exam?   @relation(fields: [examId], references: [id])
+  examId      Int?
 }
 
 model Assignment {
@@ -181,33 +292,35 @@ model Assignment {
   title     String
   startDate DateTime
   dueDate   DateTime
-
-  lessonId Int
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  results  Result[]
+  lessonId  Int
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  results   Result[]
 }
 
 model Result {
-  id    Int @id @default(autoincrement())
-  score Int
-
-  examId       Int?
-  exam         Exam?       @relation(fields: [examId], references: [id])
+  id           Int         @id @default(autoincrement())
+  score        Int
   assignmentId Int?
-  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   studentId    String
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   student      Student     @relation(fields: [studentId], references: [id])
 }
 
 model Attendance {
-  id      Int      @id @default(autoincrement())
-  date    DateTime
-  present Boolean
-
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  present   Boolean
   studentId String
-  student   Student @relation(fields: [studentId], references: [id])
-  lessonId  Int
-  lesson    Lesson  @relation(fields: [lessonId], references: [id])
+  classId   Int
+  teacherId String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  class     Class    @relation(fields: [classId], references: [id])
+  student   Student  @relation(fields: [studentId], references: [id])
+  teacher   Teacher  @relation("AttendanceMarkedBy", fields: [teacherId], references: [id])
+
+  @@unique([studentId, classId, date])
 }
 
 model Event {
@@ -216,9 +329,8 @@ model Event {
   description String
   startTime   DateTime
   endTime     DateTime
-
-  classId Int?
-  class   Class? @relation(fields: [classId], references: [id])
+  classId     Int?
+  class       Class?   @relation(fields: [classId], references: [id])
 }
 
 model Announcement {
@@ -226,9 +338,8 @@ model Announcement {
   title       String
   description String
   date        DateTime
-
-  classId Int?
-  class   Class? @relation(fields: [classId], references: [id])
+  classId     Int?
+  class       Class?   @relation(fields: [classId], references: [id])
 }
 
 enum UserSex {
@@ -244,78 +355,432 @@ enum Day {
   FRIDAY
 }
 
-enum SpecialDayType {
-  POYA_DAY
-  PUBLIC_HOLIDAY
-  SCHOOL_EVENT
-  EXAMINATION
-  VACATION
-  SPORTS_DAY
-  CULTURAL_EVENT
+enum ExamStatus {
+  DRAFT
+  MARKS_ENTRY
+  CLASS_REVIEW
+  READY_TO_PUBLISH
+  PUBLISHED
+  ARCHIVED
 }
 
-model Timetable {
-  id           Int      @id @default(autoincrement())
-  name         String
-  academicYear String
-  isActive     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  classId Int
-  class   Class           @relation(fields: [classId], references: [id])
-  slots   TimetableSlot[]
+enum ExamTypeEnum {
+  UNIT
+  TERM1
+  TERM2
+  TERM3
+  TRIAL_OL
+  NATIONAL_OL
 }
 
-model TimetableSlot {
-  id        Int     @id @default(autoincrement())
-  day       Day
-  period    Int // 1-10 periods (period 6 is break time 10:50-11:10)
-  startTime String // "08:30"
-  endTime   String // "09:20"
-  isBreak   Boolean @default(false)
-
-  timetableId Int
-  timetable   Timetable @relation(fields: [timetableId], references: [id])
-
-  // Subject assignment (can be null for free periods)
-  subjectId Int?
-  subject   Subject? @relation(fields: [subjectId], references: [id])
-
-  // Teacher assignment (can be null for free periods)
-  teacherId String?
-  teacher   Teacher? @relation(fields: [teacherId], references: [id])
-
-  @@unique([timetableId, day, period])
-}
-
-model SpecialDay {
+// Workflow tracking for exam approval process
+model ExamWorkflow {
   id          Int            @id @default(autoincrement())
-  date        DateTime
-  name        String
-  description String?
-  type        SpecialDayType
-  isRecurring Boolean        @default(false)
+  examId      Int
+  stage       WorkflowStage
+  status      WorkflowStatus @default(PENDING)
+  adminId     String?
+  teacherId   String?
+  classId     Int?
+  completedAt DateTime?
+  comments    String?
   createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  exam        Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  admin       Admin?         @relation(fields: [adminId], references: [id])
+  teacher     Teacher?       @relation(fields: [teacherId], references: [id])
+  class       Class?         @relation(fields: [classId], references: [id])
 
-  // Optional: Link to specific classes if the special day only affects certain classes
-  classId Int?
-  class   Class? @relation(fields: [classId], references: [id])
+  @@unique([examId, stage, classId])
 }
 
-model SubjectAssignment {
-  id Int @id @default(autoincrement())
+enum WorkflowStage {
+  MARKS_ENTRY
+  CLASS_REVIEW
+  ADMIN_REVIEW
+}
 
-  subjectId Int
-  subject   Subject @relation(fields: [subjectId], references: [id])
+enum WorkflowStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
 
-  teacherId String
-  teacher   Teacher @relation(fields: [teacherId], references: [id])
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
 
-  classId Int
-  class   Class @relation(fields: [classId], references: [id])
+enum ReportCardStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+}
 
-  createdAt DateTime @default(now())
+model ReportCard {
+  id              Int              @id @default(autoincrement())
+  examId          Int
+  classId         Int
+  studentId       String
+  status          ReportCardStatus @default(DRAFT)
+  totalMarks      Int?
+  maxMarks        Int?
+  percentage      Float?
+  overallGrade    String?
+  classRank       Int?
+  classAverage    Float?
+  teacherComment  String?
+  principalComment String?
+  generatedAt     DateTime         @default(now())
+  approvedAt      DateTime?
+  approvedBy      String?
+  publishedAt     DateTime?
+  qrCode          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  exam            Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  class           Class            @relation(fields: [classId], references: [id])
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  approver        Admin?           @relation(fields: [approvedBy], references: [id])
+  subjects        ReportCardSubject[]
+  
+  @@unique([examId, classId, studentId])
+}
 
-  @@unique([subjectId, teacherId, classId])
+model ReportCardSubject {
+  id              Int        @id @default(autoincrement())
+  reportCardId    Int
+  subjectId       Int
+  marks           Int
+  maxMarks        Int
+  grade           String
+  classAverage    Float?
+  remarks         String?
+  
+  reportCard      ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
+  subject         Subject    @relation(fields: [subjectId], references: [id])
+  
+  @@unique([reportCardId, subjectId])
+}
+
+model ReportWorkflow {
+  id               Int           @id @default(autoincrement())
+  examId           Int
+  classId          Int
+  currentStage     WorkflowStage @default(MARKS_ENTRY)
+  marksComplete    Boolean       @default(false)
+  classReviewed    Boolean       @default(false)
+  classReviewedBy  String?
+  classReviewedAt  DateTime?
+  adminApproved    Boolean       @default(false)
+  adminApprovedBy  String?
+  adminApprovedAt  DateTime?
+  published        Boolean       @default(false)
+  publishedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  exam             Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  class            Class         @relation(fields: [classId], references: [id])
+  classReviewer    Teacher?      @relation(fields: [classReviewedBy], references: [id])
+  adminApprover    Admin?        @relation(fields: [adminApprovedBy], references: [id])
+  
+  @@unique([examId, classId])
+}
+
+model GradeScale {
+  id          Int     @id @default(autoincrement())
+  gradeId     Int
+  minPercent  Float
+  maxPercent  Float
+  grade       String
+  points      Float?
+  description String?
+  
+  gradeLevel  Grade   @relation(fields: [gradeId], references: [id])
+  
+  @@unique([gradeId, grade])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  receiverId  String
+  createdAt   DateTime @default(now())
+  isRead      Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  
+  // Relations - using generic User relations since we have multiple user types
+  @@map("messages")
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  participants  String[] // Array of user IDs
+  lastMessage   String?
+  lastMessageAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("conversations")
+}
+
+// ============================================
+// CLASS TEACHER SYSTEM MODELS
+// ============================================
+
+// History of class teacher assignments
+model ClassTeacherAssignment {
+  id          String    @id @default(cuid())
+  teacherId   String
+  classId     Int
+  assignedAt  DateTime  @default(now())
+  removedAt   DateTime?
+  assignedBy  String?   // Admin who made the assignment
+  reason      String?   // Reason for assignment/removal
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  
+  @@index([teacherId])
+  @@index([classId])
+  @@index([isActive])
+  @@map("class_teacher_assignments")
+}
+
+// Parent-Teacher Meetings
+model ParentMeeting {
+  id            String    @id @default(cuid())
+  teacherId     String
+  parentId      String
+  studentId     String
+  classId       Int
+  title         String
+  description   String?
+  scheduledDate DateTime
+  duration      Int       @default(30) // minutes
+  location      String?
+  meetingType   MeetingType @default(IN_PERSON)
+  status        MeetingStatus @default(SCHEDULED)
+  notes         String?   // Notes after meeting
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  teacher       Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  parent        Parent    @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([teacherId])
+  @@index([parentId])
+  @@index([studentId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@map("parent_meetings")
+}
+
+// Class-specific announcements by class teacher
+model ClassAnnouncement {
+  id             String    @id @default(cuid())
+  teacherId      String
+  classId        Int
+  title          String
+  content        String
+  priority       AnnouncementPriority @default(NORMAL)
+  targetAudience AnnouncementAudience @default(PARENTS)
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  isPublished    Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  teacher        Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  
+  @@index([teacherId])
+  @@index([classId])
+  @@index([isPublished])
+  @@map("class_announcements")
+}
+
+// Direct messages between class teacher and parents
+model ClassTeacherMessage {
+  id         String    @id @default(cuid())
+  senderId   String
+  receiverId String
+  classId    Int
+  studentId  String?   // Reference to student if message is about specific student
+  subject    String
+  content    String
+  isRead     Boolean   @default(false)
+  readAt     DateTime?
+  priority   MessagePriority @default(NORMAL)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  
+  sender     Teacher   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   Parent    @relation(fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([classId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("class_teacher_messages")
+}
+
+// ============================================
+// ENUMS FOR CLASS TEACHER SYSTEM
+// ============================================
+
+enum MeetingType {
+  IN_PERSON
+  ONLINE
+  PHONE
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+  NO_SHOW
+}
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum AnnouncementAudience {
+  PARENTS
+  STUDENTS
+  BOTH
+}
+
+enum MessagePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ============================================
+// SCHOOL TIMETABLE SYSTEM MODELS
+// ============================================
+
+// School Timetable - One timetable per class
+model SchoolTimetable {
+  id            String              @id @default(cuid())
+  classId       Int                 @unique
+  academicYear  String              // e.g., "2025/2026"
+  term          String?             // e.g., "Term 1"
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  createdBy     String?             // Admin who created
+  
+  class         Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  slots         TimetableSlot[]
+  
+  @@index([classId])
+  @@index([isActive])
+  @@map("school_timetables")
+}
+
+// Individual time slots in the timetable
+model TimetableSlot {
+  id            String              @id @default(cuid())
+  timetableId   String
+  day           TimetableDay
+  period        Int                 // 1-8
+  startTime     String              // "07:40"
+  endTime       String              // "08:20"
+  slotType      SlotType            @default(REGULAR)
+  
+  // Subject and teacher (null for blocked times)
+  subjectId     Int?
+  teacherId     String?
+  
+  // Optional metadata
+  roomNumber    String?
+  notes         String?
+  
+  timetable     SchoolTimetable     @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  subject       Subject?            @relation(fields: [subjectId], references: [id])
+  teacher       Teacher?            @relation("TimetableSlots", fields: [teacherId], references: [id])
+  
+  @@unique([timetableId, day, period])
+  @@index([timetableId])
+  @@index([teacherId])
+  @@index([day, period])
+  @@map("timetable_slots")
+}
+
+// Holidays and special days (blocks entire day)
+model Holiday {
+  id            String              @id @default(cuid())
+  name          String              // "Vesak Full Moon Poya Day"
+  date          DateTime
+  type          HolidayType         @default(PUBLIC)
+  description   String?
+  isRecurring   Boolean             @default(false) // For annual events
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  @@index([date])
+  @@map("holidays")
+}
+
+// Blocked time periods (cannot be scheduled)
+model BlockedTime {
+  id            String              @id @default(cuid())
+  name          String              // "Assembly", "Interval", "Pack-up"
+  startTime     String              // "07:30"
+  endTime       String              // "07:40"
+  days          TimetableDay[]      // Days this applies to
+  isActive      Boolean             @default(true)
+  description   String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  @@map("blocked_times")
+}
+
+// ============================================
+// ENUMS FOR TIMETABLE SYSTEM
+// ============================================
+
+enum TimetableDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
+enum SlotType {
+  REGULAR       // Normal period
+  DOUBLE        // Double period (manually set)
+  ASSEMBLY      // Assembly time
+  INTERVAL      // Break time
+  LUNCH         // Lunch time
+  PACKUP        // Pack-up time
+}
+
+enum HolidayType {
+  PUBLIC        // Public/National holiday
+  POYA          // Poya day
+  SCHOOL        // School-specific holiday
+  EXAM          // Exam period
+  OTHER
 }

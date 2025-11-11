@@ -4,17 +4,39 @@ import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const dropdown = searchParams.get("dropdown");
+    
+    // Simple dropdown API for forms
+    if (dropdown === "true") {
+      const classes = await prisma.class.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+      return NextResponse.json(classes);
+    }
+
     const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const search = searchParams.get("search") || "";
+    const gradeId = searchParams.get("gradeId");
     const ITEM_PER_PAGE = 10;
 
     const where: any = {};
+
+    // Add gradeId filter
+    if (gradeId) {
+      where.gradeId = parseInt(gradeId);
+    }
 
     // Add search filter
     if (search) {

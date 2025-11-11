@@ -6,6 +6,7 @@ import Table from "@/components/Table";
 import TeacherForm from "@/components/TeacherForm";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import toast from "react-hot-toast";
+import { formatClassName } from "@/lib/formatClassName";
 
 type Teacher = {
   id: string;
@@ -147,11 +148,6 @@ const TeacherListPage = () => {
   const columns = [
     { header: "Info", accessor: "info" },
     {
-      header: "Teacher ID",
-      accessor: "teacherId",
-      className: "hidden md:table-cell",
-    },
-    {
       header: "Subjects",
       accessor: "subjects",
       className: "hidden md:table-cell",
@@ -175,7 +171,7 @@ const TeacherListPage = () => {
   const renderRow = (item: Teacher) => (
     <tr
       key={item.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+      className="border-b border-gray-100 even:bg-blue-50/30 text-sm hover:bg-indigo-50/50 transition-colors"
     >
       <td className="flex items-center gap-4 p-4">
         <Image
@@ -186,18 +182,30 @@ const TeacherListPage = () => {
           className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <h3 className="font-semibold">
+          <h3 className="font-semibold text-gray-800">
             {item.name} {item.surname}
           </h3>
           <p className="text-xs text-gray-500">{item.email}</p>
+          <p className="text-xs text-indigo-600 font-medium">@{item.username}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.username}</td>
       <td className="hidden md:table-cell">
-        {item.subjects?.map((s) => s.name).join(", ") || "No subjects"}
+        <div className="flex flex-wrap gap-1">
+          {item.subjects?.length > 0 ? item.subjects.map((s) => (
+            <span key={s.name} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {s.name}
+            </span>
+          )) : <span className="text-gray-400 text-sm">No subjects</span>}
+        </div>
       </td>
       <td className="hidden md:table-cell">
-        {item.classes?.map((c) => c.name).join(", ") || "No classes"}
+        <div className="flex flex-wrap gap-1">
+          {item.classes?.length > 0 ? item.classes.map((c) => (
+            <span key={c.name} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              {formatClassName(c.name)}
+            </span>
+          )) : <span className="text-gray-400 text-sm">No classes</span>}
+        </div>
       </td>
       <td className="hidden lg:table-cell">{item.phone || "N/A"}</td>
       <td className="hidden lg:table-cell">{item.address || "N/A"}</td>
@@ -206,14 +214,16 @@ const TeacherListPage = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleEditTeacher(item)}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-sm transition-all transform hover:scale-105"
+              title="Edit Teacher"
             >
               <Image src="/update.png" alt="" width={16} height={16} />
             </button>
             <button
               onClick={() => handleDeleteClick(item)}
               disabled={deleting === item.id}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-sm transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Delete Teacher"
             >
               {deleting === item.id ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -238,90 +248,105 @@ const TeacherListPage = () => {
   }
 
   return (
-    <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">
-          {user?.role === "student"
-            ? "My Teachers"
-            : user?.role === "parent"
-            ? "Children's Teachers"
-            : "All Teachers"}
-        </h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const value = (e.currentTarget[0] as HTMLInputElement).value;
-              handleSearch(value);
-            }}
-            className="w-full md:w-auto flex items-center gap-2 text-xs rounded-full ring-[1.5px] ring-gray-300 px-2"
-          >
-            <Image src="/search.png" alt="" width={14} height={14} />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-[200px] p-2 bg-transparent outline-none"
-              defaultValue={searchTerm}
-            />
-          </form>
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {user?.role === "admin" && (
-              <button
-                onClick={handleCreateTeacher}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-500 transition-colors"
-                title="Add New Teacher"
-              >
-                <Image
-                  src="/create.png"
-                  alt="Add Teacher"
-                  width={16}
-                  height={16}
-                />
+    <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6 rounded-xl shadow-lg flex-1 m-4 mt-0">
+      {/* Header with gradient */}
+      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-md border border-white/20 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              {user?.role === "student"
+                ? "My Teachers"
+                : user?.role === "parent"
+                ? "Children's Teachers"
+                : "All Teachers"}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Total: {total} teacher{total !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const value = (e.currentTarget[0] as HTMLInputElement).value;
+                handleSearch(value);
+              }}
+              className="w-full md:w-auto flex items-center gap-2 text-sm rounded-lg border border-gray-300 px-3 py-2 bg-white/90 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 shadow-sm transition-all"
+            >
+              <Image src="/search.png" alt="" width={16} height={16} className="opacity-50" />
+              <input
+                type="text"
+                placeholder="Search teachers..."
+                className="w-[200px] bg-transparent outline-none text-gray-700 placeholder-gray-400"
+                defaultValue={searchTerm}
+              />
+            </form>
+            <div className="flex items-center gap-2">
+              <button className="p-2 rounded-lg bg-white/90 border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm" title="Filter">
+                <Image src="/filter.png" alt="" width={18} height={18} />
               </button>
-            )}
+              <button className="p-2 rounded-lg bg-white/90 border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm" title="Sort">
+                <Image src="/sort.png" alt="" width={18} height={18} />
+              </button>
+              {user?.role === "admin" && (
+                <button
+                  onClick={handleCreateTeacher}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium transition-all shadow-md transform hover:scale-105"
+                  title="Add New Teacher"
+                >
+                  <Image
+                    src="/create.png"
+                    alt="Add Teacher"
+                    width={16}
+                    height={16}
+                  />
+                  <span className="hidden sm:inline">Add Teacher</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <Table columns={columns} renderRow={renderRow} data={teachers} />
+      {/* Table Container */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-white/20 overflow-hidden">
+        <Table columns={columns} renderRow={renderRow} data={teachers} />
 
-      <div className="p-4 flex items-center justify-between text-gray-500">
-        <button
-          disabled={currentPage <= 1}
-          className="py-2 px-4 rounded-md bg-slate-200 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => handlePageChange(currentPage - 1)}
-        >
-          Prev
-        </button>
-        <div className="flex items-center gap-2 text-sm">
-          {Array.from({ length: totalPages }, (_, index) => {
-            const pageIndex = index + 1;
-            return (
-              <button
-                key={pageIndex}
-                className={`px-2 rounded-sm ${
-                  currentPage === pageIndex ? " bg-lamaSky" : ""
-                }`}
-                onClick={() => handlePageChange(pageIndex)}
-              >
-                {pageIndex}
-              </button>
-            );
-          })}
+        {/* Pagination */}
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-t border-gray-200 flex items-center justify-between">
+          <button
+            disabled={currentPage <= 1}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            <span>← Previous</span>
+          </button>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageIndex = index + 1;
+              return (
+                <button
+                  key={pageIndex}
+                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-all shadow-sm ${
+                    currentPage === pageIndex
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md transform scale-110"
+                      : "bg-white border border-gray-300 text-gray-700 hover:bg-indigo-50 hover:border-indigo-400"
+                  }`}
+                  onClick={() => handlePageChange(pageIndex)}
+                >
+                  {pageIndex}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            <span>Next →</span>
+          </button>
         </div>
-        <button
-          className="py-2 px-4 rounded-md bg-slate-200 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={currentPage >= totalPages}
-          onClick={() => handlePageChange(currentPage + 1)}
-        >
-          Next
-        </button>
       </div>
 
       {/* Teacher Form Modal */}

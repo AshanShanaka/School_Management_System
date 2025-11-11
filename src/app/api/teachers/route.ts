@@ -4,55 +4,78 @@ import { getCurrentUser, hashPassword } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const dropdown = searchParams.get("dropdown");
+    
+    // Simple dropdown API for forms
+    if (dropdown === "true") {
+      const teachers = await prisma.teacher.findMany({
+        select: {
+          id: true,
+          name: true,
+          surname: true,
+        },
+        orderBy: [
+          { name: "asc" },
+          { surname: "asc" },
+        ],
+      });
+      return NextResponse.json(teachers);
+    }
+
     const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const search = searchParams.get("search") || "";
     const classId = searchParams.get("classId");
-    const ITEM_PER_PAGE = 10;
+    const getAll = searchParams.get("all") === "true"; // New parameter to get all teachers
+    const ITEM_PER_PAGE = getAll ? 1000 : 10; // Get many more if "all" is requested
 
     const where: any = {};
 
-    // Apply filters based on user role
-    if (user.role === "student") {
-      // Students see their teachers
-      const student = await prisma.student.findUnique({
-        where: { id: user.id },
-        include: {
-          class: { include: { lessons: { include: { teacher: true } } } },
-        },
-      });
+    // For supervisor assignment, skip role-based filtering if "all" is requested
+    if (!getAll) {
+      // Apply filters based on user role
+      if (user.role === "student") {
+        // Students see their teachers
+        const student = await prisma.student.findUnique({
+          where: { id: user.id },
+          include: {
+            class: { include: { lessons: { include: { teacher: true } } } },
+          },
+        });
 
-      const teacherIds =
-        student?.class?.lessons?.map((lesson) => lesson.teacher.id) || [];
-      where.id = { in: teacherIds };
-    } else if (user.role === "parent") {
-      // Parents see their children's teachers
-      const parent = await prisma.parent.findUnique({
-        where: { id: user.id },
-        include: {
-          students: {
-            include: {
-              class: { include: { lessons: { include: { teacher: true } } } },
+        const teacherIds =
+          student?.class?.lessons?.map((lesson) => lesson.teacher.id) || [];
+        where.id = { in: teacherIds };
+      } else if (user.role === "parent") {
+        // Parents see their children's teachers
+        const parent = await prisma.parent.findUnique({
+          where: { id: user.id },
+          include: {
+            students: {
+              include: {
+                class: { include: { lessons: { include: { teacher: true } } } },
+              },
             },
           },
-        },
-      });
-
-      const teacherIds = new Set<string>();
-      parent?.students?.forEach((student) => {
-        student.class?.lessons?.forEach((lesson) => {
-          teacherIds.add(lesson.teacher.id);
         });
-      });
 
-      where.id = { in: Array.from(teacherIds) };
+        const teacherIds = new Set<string>();
+        parent?.students?.forEach((student) => {
+          student.class?.lessons?.forEach((lesson) => {
+            teacherIds.add(lesson.teacher.id);
+          });
+        });
+
+        where.id = { in: Array.from(teacherIds) };
+      }
     }
     // Admin and teachers see all teachers (no additional filters)
+    // When getAll=true, also no filters regardless of role
 
     // Add search filter
     if (search) {
@@ -81,6 +104,8 @@ export async function GET(request: NextRequest) {
       }),
       prisma.teacher.count({ where }),
     ]);
+
+    console.log(`📊 Teachers API: returning ${teachers.length} teachers (total: ${total}, getAll: ${getAll})`);
 
     return NextResponse.json({
       teachers,

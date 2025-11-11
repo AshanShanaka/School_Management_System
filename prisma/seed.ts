@@ -58,6 +58,24 @@ async function main() {
   }
   console.log("✅ Created sample subjects");
 
+  // Create exam types
+  const examTypes = [
+    { name: "Term 1" },
+    { name: "Term 2" },
+    { name: "Term 3" },
+  ];
+
+  const createdExamTypes = [];
+  for (const examType of examTypes) {
+    const created = await prisma.examType.upsert({
+      where: { name: examType.name },
+      update: {},
+      create: examType,
+    });
+    createdExamTypes.push(created);
+  }
+  console.log("✅ Created sample exam types");
+
   // Create sample classes with proper relationships
   const classesData = [
     { name: "1-A", capacity: 25, gradeId: grades[0].id },

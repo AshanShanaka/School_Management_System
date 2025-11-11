@@ -16,9 +16,9 @@ import {
   updateSubject,
   CurrentState,
 } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/hooks/useFormState";
 import { Dispatch, SetStateAction, useEffect } from "react";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
 const ClassForm = ({
@@ -26,12 +26,16 @@ const ClassForm = ({
   data,
   setOpen,
   relatedData,
+  onSuccess,
 }: {
   type: "create" | "update";
   data?: any;
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
+  onSuccess?: () => void;
 }) => {
+  console.log("ClassForm props:", { type, data, relatedData });
+  
   const {
     register,
     handleSubmit,
@@ -57,32 +61,70 @@ const ClassForm = ({
   // AFTER REACT 19 IT'LL BE USEACTIONSTATE
 
   const [state, formAction] = useFormState(
-    (state: CurrentState, formData: ClassSchema) =>
-      type === "create"
-        ? createClass(state, formData)
-        : updateClass(state, formData),
+    async (state: CurrentState, formData: FormData) => {
+      // Convert FormData to ClassSchema
+      const data: ClassSchema = {
+        name: formData.get("name") as string,
+        capacity: parseInt(formData.get("capacity") as string),
+        gradeId: parseInt(formData.get("gradeId") as string),
+        supervisorId: formData.get("supervisorId") as string,
+      };
+      
+      // Add ID for updates from FormData
+      if (type === "update") {
+        const idValue = formData.get("id");
+        if (idValue) {
+          data.id = parseInt(idValue as string);
+        }
+      }
+      
+      console.log("Action data:", data, "Type:", type);
+      
+      return type === "create"
+        ? createClass(state, data)
+        : updateClass(state, data);
+    },
     {
       success: false,
       error: false,
     }
   );
 
-  const onSubmit = handleSubmit((formData) => {
+  const onSubmit = handleSubmit(async (formData) => {
     console.log("Submitting class data:", formData);
-    formAction(formData);
+    console.log("Type:", type, "Data:", data);
+    // Create FormData object for the action
+    const form = new FormData();
+    form.append("name", formData.name || "");
+    form.append("capacity", formData.capacity?.toString() || "");
+    form.append("gradeId", formData.gradeId?.toString() || "");
+    form.append("supervisorId", formData.supervisorId || "");
+    
+    // Add ID for updates - it should come from the data prop
+    if (type === "update" && data?.id) {
+      form.append("id", data.id.toString());
+    }
+    
+    formAction(form);
   });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Class has been ${type === "create" ? "created" : "updated"}!`);
+      toast.success(`Class has been ${type === "create" ? "created" : "updated"} successfully!`);
       setOpen(false);
+      if (onSuccess) {
+        onSuccess(); // Call the refresh function from parent
+      }
       router.refresh();
     }
-  }, [state, router, type, setOpen]);
+    if (state.error) {
+      toast.error(`Failed to ${type === "create" ? "create" : "update"} class. Please try again.`);
+    }
+  }, [state, router, type, setOpen, onSuccess]);
 
-  const { teachers, grades } = relatedData;
+  const { teachers, grades } = relatedData || {};
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -124,7 +166,7 @@ const ClassForm = ({
             defaultValue={data?.supervisorId || ""}
           >
             <option value="">Select a supervisor</option>
-            {teachers.map(
+            {Array.isArray(teachers) && teachers.map(
               (teacher: { id: string; name: string; surname: string }) => (
                 <option value={teacher.id} key={teacher.id}>
                   {teacher.name + " " + teacher.surname}

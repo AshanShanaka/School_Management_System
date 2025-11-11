@@ -11,6 +11,8 @@ import {
   deleteAssignment,
   deleteGrade,
   deleteTimetable,
+  deleteEvent,
+  deleteAnnouncement,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -42,8 +44,8 @@ const deleteActionMap = {
   grade: deleteGrade,
   result: deleteSubject,
   attendance: deleteSubject,
-  event: deleteSubject,
-  announcement: deleteSubject,
+  event: deleteEvent,
+  announcement: deleteAnnouncement,
   timetable: deleteTimetable,
 };
 
@@ -92,6 +94,14 @@ const TimetableForm = dynamic(() => import("./forms/TimetableForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
+const EventForm = dynamic(() => import("./forms/EventForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
+const AnnouncementForm = dynamic(() => import("./forms/AnnouncementForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
 // TODO: OTHER FORMS
 
 interface Teacher {
@@ -117,7 +127,7 @@ const forms: {
     type: "create" | "update",
     data?: any,
     relatedData?: any
-  ) => JSX.Element;
+  ) => React.JSX.Element;
 } = {
   subject: (setOpen, type, data, relatedData) => (
     <SubjectForm
@@ -193,6 +203,12 @@ const forms: {
       setOpen={setOpen}
       relatedData={relatedData}
     />
+  ),
+  event: (setOpen, type, data) => (
+    <EventForm type={type} data={data} />
+  ),
+  announcement: (setOpen, type, data) => (
+    <AnnouncementForm type={type} data={data} />
   ),
   teachers: (setOpen, type, data, relatedData) => (
     <TeacherForm

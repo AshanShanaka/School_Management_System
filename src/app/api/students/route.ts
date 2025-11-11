@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const search = searchParams.get("search") || "";
     const classId = searchParams.get("classId");
+    const gradeId = searchParams.get("gradeId");
     const viewMode = searchParams.get("viewMode") || "list"; // Add viewMode parameter
     const ITEM_PER_PAGE = 10;
 
@@ -57,6 +58,16 @@ export async function GET(request: NextRequest) {
       const classIdInt = parseInt(classId);
       if (!isNaN(classIdInt)) {
         where.classId = classIdInt;
+      }
+    }
+
+    // Add grade filter
+    if (gradeId) {
+      const gradeIdInt = parseInt(gradeId);
+      if (!isNaN(gradeIdInt)) {
+        where.class = {
+          gradeId: gradeIdInt,
+        };
       }
     }
 

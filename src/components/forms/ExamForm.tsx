@@ -8,7 +8,7 @@ import FormDate from "./FormDate";
 import FormTime from "./FormTime";
 import { examSchema } from "@/lib/formValidationSchemas";
 import { createExam, updateExam } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/hooks/useFormState";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -53,8 +53,46 @@ const ExamForm = ({
     },
   });
 
+  // Wrapper functions to handle FormData conversion
+  const createExamAction = async (state: any, formData: FormData) => {
+    const data = {
+      title: formData.get("title") as string,
+      examTypeId: parseInt(formData.get("examTypeId") as string),
+      subjectId: parseInt(formData.get("subjectId") as string),
+      teacherId: formData.get("teacherId") as string,
+      startDate: formData.get("startDate") as string,
+      startTime: formData.get("startTime") as string,
+      endDate: formData.get("endDate") as string,
+      endTime: formData.get("endTime") as string,
+      duration: formData.get("duration") as string,
+      venue: formData.get("venue") as string,
+      day: formData.get("day") as "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY",
+      subjectCode: formData.get("subjectCode") as string,
+    };
+    return await createExam(state, data);
+  };
+
+  const updateExamAction = async (state: any, formData: FormData) => {
+    const data = {
+      id: parseInt(formData.get("id") as string),
+      title: formData.get("title") as string,
+      examTypeId: parseInt(formData.get("examTypeId") as string),
+      subjectId: parseInt(formData.get("subjectId") as string),
+      teacherId: formData.get("teacherId") as string,
+      startDate: formData.get("startDate") as string,
+      startTime: formData.get("startTime") as string,
+      endDate: formData.get("endDate") as string,
+      endTime: formData.get("endTime") as string,
+      duration: formData.get("duration") as string,
+      venue: formData.get("venue") as string,
+      day: formData.get("day") as "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY",
+      subjectCode: formData.get("subjectCode") as string,
+    };
+    return await updateExam(state, data);
+  };
+
   const [state, formAction] = useFormState(
-    type === "create" ? createExam : updateExam,
+    type === "create" ? createExamAction : updateExamAction,
     {
       success: false,
       error: false,
@@ -62,22 +100,25 @@ const ExamForm = ({
   );
 
   const onSubmit = handleSubmit((formData) => {
-    const examData = {
-      ...(data?.id && { id: data.id }),
-      title: formData.title,
-      examTypeId: parseInt(formData.examTypeId),
-      subjectId: parseInt(formData.subjectId),
-      teacherId: formData.teacherId,
-      startDate: formData.startDate,
-      startTime: formData.startTime,
-      endDate: formData.endDate,
-      endTime: formData.endTime,
-      duration: formData.duration,
-      venue: formData.venue || undefined,
-      day: undefined,
-      subjectCode: undefined,
-    };
-    formAction(examData);
+    const form = new FormData();
+    form.append("title", formData.title || "");
+    form.append("examTypeId", formData.examTypeId?.toString() || "");
+    form.append("subjectId", formData.subjectId?.toString() || "");
+    form.append("teacherId", formData.teacherId || "");
+    form.append("startDate", formData.startDate || "");
+    form.append("startTime", formData.startTime || "");
+    form.append("endDate", formData.endDate || "");
+    form.append("endTime", formData.endTime || "");
+    form.append("duration", formData.duration || "");
+    form.append("venue", formData.venue || "");
+    form.append("day", "MONDAY"); // Default value
+    form.append("subjectCode", ""); // Default value
+    
+    if (data?.id) {
+      form.append("id", data.id.toString());
+    }
+    
+    formAction(form);
   });
 
   const router = useRouter();

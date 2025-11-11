@@ -122,7 +122,7 @@ const StudentAttendancePage = async ({
             <h1 className="text-2xl font-bold">My Attendance</h1>
             <p className="text-gray-500 mt-1">
               {student.name} {student.surname} - Class{" "}
-              {student.class.grade.level}-{student.class.name}
+              {student.class.name}
             </p>
           </div>
           <div className="text-right">
@@ -312,7 +312,7 @@ const StudentAttendancePage = async ({
         {/* Quick Actions */}
         <div className="mt-6 flex gap-4">
           <Link
-            href="/list/timetables"
+            href="/student/timetable"
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             View My Timetable

@@ -1,7 +1,7 @@
 "use client";
 
 import { deleteGrade } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/hooks/useFormState";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";

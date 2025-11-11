@@ -1,50 +1,45 @@
 import { getCurrentUser } from "@/lib/auth";
 import Image from "next/image";
-import LogoutButton from "./LogoutButton";
+import NotificationDropdown from "./NotificationDropdown";
+import MessageNotification from "./MessageNotification";
+import ProfileDropdown from "./ProfileDropdown";
 
 const Navbar = async () => {
   const user = await getCurrentUser();
   const role = user?.role || "";
 
   return (
-    <div className="flex items-center justify-between p-4">
-      {/* SEARCH BAR */}
-      <div className="hidden md:flex items-center gap-2 text-xs rounded-full ring-[1.5px] ring-gray-300 px-2">
-        <Image src="/search.png" alt="" width={14} height={14} />
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-[200px] p-2 bg-transparent outline-none"
-        />
-      </div>
-      {/* ICONS AND USER */}
-      <div className="flex items-center gap-6 justify-end w-full">
-        <div className="bg-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer">
-          <Image src="/message.png" alt="" width={20} height={20} />
-        </div>
-        <div className="bg-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer relative">
-          <Image src="/announcement.png" alt="" width={20} height={20} />
-          <div className="absolute -top-3 -right-3 w-5 h-5 flex items-center justify-center bg-purple-500 text-white rounded-full text-xs">
-            1
+    <div className="sticky top-0 z-10 bg-white border-b border-neutral-200 shadow-soft">
+      <div className="flex items-center justify-between px-6 py-3.5">
+        {/* SEARCH BAR */}
+        <div className="hidden md:flex items-center gap-3 flex-1 max-w-md">
+          <div className="relative flex-1">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+              <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full pl-10 pr-4 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg 
+                         transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 
+                         focus:border-transparent focus:bg-white placeholder:text-neutral-400"
+            />
+            <kbd className="hidden lg:inline-flex absolute right-3 top-1/2 -translate-y-1/2 
+                           items-center gap-1 px-1.5 py-0.5 bg-white border border-neutral-300 
+                           rounded text-[10px] font-medium text-neutral-600">
+              <span>⌘</span>K
+            </kbd>
           </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-xs leading-3 font-medium">
-            {user ? `${user.name} ${user.surname}` : "Guest"}
-          </span>
-          <span className="text-[10px] text-gray-500 text-right capitalize">
-            {role}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Image
-            src="/avatar.png"
-            alt=""
-            width={36}
-            height={36}
-            className="rounded-full"
-          />
-          <LogoutButton />
+        
+        {/* ICONS AND USER */}
+        <div className="flex items-center gap-4 ml-auto">
+          <MessageNotification />
+          <NotificationDropdown />
+          <div className="h-6 w-px bg-neutral-300"></div>
+          <ProfileDropdown user={user} />
         </div>
       </div>
     </div>

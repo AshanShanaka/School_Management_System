@@ -136,8 +136,10 @@ const ExcelImport = () => {
           singleFileType === "students-parents" ? studentsFile : teachersFile;
         const formData = new FormData();
         formData.append("file", currentFile!);
-        formData.append("type", singleFileType);
-        formData.append("syncMode", syncMode.toString());
+        // Convert "students-parents" to "students" for API compatibility
+        const apiType = singleFileType === "students-parents" ? "students" : "teachers";
+        formData.append("importType", apiType);
+        formData.append("clearExisting", syncMode.toString());
 
         const response = await fetch("/api/import", {
           method: "POST",
@@ -170,8 +172,8 @@ const ExcelImport = () => {
         // Import students+parents first
         const studentsFormData = new FormData();
         studentsFormData.append("file", studentsFile!);
-        studentsFormData.append("type", "students-parents");
-        studentsFormData.append("syncMode", syncMode.toString());
+        studentsFormData.append("importType", "students");
+        studentsFormData.append("clearExisting", syncMode.toString());
 
         const studentsResponse = await fetch("/api/import", {
           method: "POST",
@@ -187,8 +189,8 @@ const ExcelImport = () => {
         // Import teachers second
         const teachersFormData = new FormData();
         teachersFormData.append("file", teachersFile!);
-        teachersFormData.append("type", "teachers");
-        teachersFormData.append("syncMode", syncMode.toString());
+        teachersFormData.append("importType", "teachers");
+        teachersFormData.append("clearExisting", syncMode.toString());
 
         const teachersResponse = await fetch("/api/import", {
           method: "POST",

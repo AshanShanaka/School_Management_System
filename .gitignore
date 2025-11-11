@@ -35,3 +35,46 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Development & Testing Scripts (temporary/one-off)
+test-*.js
+check-*.js
+add-*.js
+fix-*.js
+verify-*.js
+seed-*.js
+assign-*.js
+clear-*.js
+
+# Backup & Archive
+backup_deleted_files/
+*.zip
+*.rar
+*.7z
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python (for ML model folder)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv
+
+# Temporary docs (keep in docs/ folder instead)
+*_FIX.md
+*_GUIDE_TEMP.md
+*_DRAFT.md

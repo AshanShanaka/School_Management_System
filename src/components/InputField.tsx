@@ -36,7 +36,17 @@ const InputField = ({
   disabled,
   options,
 }: InputFieldProps) => {
-  if (hidden) return null;
+  // For hidden fields, render a hidden input
+  if (hidden) {
+    return (
+      <input
+        type="hidden"
+        {...register(name)}
+        defaultValue={defaultValue}
+        {...inputProps}
+      />
+    );
+  }
 
   return (
     <div

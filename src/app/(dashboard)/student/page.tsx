@@ -4,6 +4,7 @@ import Performance from "@/components/Performance";
 import StudentAttendanceCard from "@/components/StudentAttendanceCard";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { formatClassName } from "@/lib/formatClassName";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -23,6 +24,36 @@ const StudentPage = async () => {
       },
     },
   });
+
+  if (!student) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-gray-500">Student profile not found.</p>
+      </div>
+    );
+  }
+
+  // Calculate real attendance statistics
+  const attendanceStats = await prisma.attendance.aggregate({
+    where: { studentId: student.id },
+    _count: {
+      id: true,
+      present: true,
+    },
+  });
+
+  const totalAttendanceRecords = attendanceStats._count.id || 0;
+  const presentCount = await prisma.attendance.count({
+    where: { studentId: student.id, present: true },
+  });
+  const absentCount = await prisma.attendance.count({
+    where: { studentId: student.id, present: false },
+  });
+
+  // Calculate attendance rate
+  const attendanceRate = totalAttendanceRecords > 0 
+    ? Math.round((presentCount / totalAttendanceRecords) * 100)
+    : 0;
 
   // Get upcoming assignments
   const upcomingAssignments = await prisma.assignment.findMany({
@@ -64,13 +95,17 @@ const StudentPage = async () => {
     take: 5,
   });
 
-  if (!student) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-gray-500">Student profile not found.</p>
-      </div>
-    );
-  }
+  // Calculate average grade
+  const averageResult = await prisma.result.aggregate({
+    where: { studentId: student.id },
+    _avg: { score: true },
+    _count: { id: true },
+  });
+
+  const averageGrade = averageResult._avg.score 
+    ? Math.round(averageResult._avg.score)
+    : 0;
+  const totalResults = averageResult._count.id || 0;
 
   return (
     <div className="p-4 flex gap-4 flex-col xl:flex-row min-h-screen bg-gray-50">
@@ -94,7 +129,7 @@ const StudentPage = async () => {
                 Student ID: {student.username}
               </p>
               <p className="text-purple-100">
-                Class {student.class.grade.level}-{student.class.name}
+                Class {formatClassName(student.class.name)}
               </p>
             </div>
           </div>
@@ -106,7 +141,7 @@ const StudentPage = async () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Overall Rate</p>
-                <p className="text-2xl font-bold text-blue-600">95%</p>
+                <p className="text-2xl font-bold text-blue-600">{attendanceRate}%</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <Image src="/attendance.png" alt="" width={24} height={24} />
@@ -118,7 +153,7 @@ const StudentPage = async () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Days Present</p>
-                <p className="text-2xl font-bold text-green-600">18</p>
+                <p className="text-2xl font-bold text-green-600">{presentCount}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
                 <Image src="/attendance.png" alt="" width={24} height={24} />
@@ -130,7 +165,7 @@ const StudentPage = async () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Days Absent</p>
-                <p className="text-2xl font-bold text-red-600">1</p>
+                <p className="text-2xl font-bold text-red-600">{absentCount}</p>
               </div>
               <div className="p-3 bg-red-100 rounded-full">
                 <Image src="/attendance.png" alt="" width={24} height={24} />
@@ -141,11 +176,11 @@ const StudentPage = async () => {
           <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Times Late</p>
-                <p className="text-2xl font-bold text-yellow-600">2</p>
+                <p className="text-sm text-gray-600">Average Grade</p>
+                <p className="text-2xl font-bold text-yellow-600">{averageGrade}%</p>
               </div>
               <div className="p-3 bg-yellow-100 rounded-full">
-                <Image src="/attendance.png" alt="" width={24} height={24} />
+                <Image src="/result.png" alt="" width={24} height={24} />
               </div>
             </div>
           </div>
@@ -160,7 +195,7 @@ const StudentPage = async () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
               <h3 className="font-semibold text-lg text-gray-800 mb-2">
-                Class {student.class.grade.level}-{student.class.name}
+                Class {formatClassName(student.class.name)}
               </h3>
               <p className="text-sm text-gray-600">
                 {student.class._count.students} students •{" "}
@@ -216,20 +251,20 @@ const StudentPage = async () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">95%</div>
+              <div className="text-2xl font-bold text-blue-600">{attendanceRate}%</div>
               <div className="text-sm text-gray-600">Overall Rate</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-green-600">18</div>
+              <div className="text-2xl font-bold text-green-600">{presentCount}</div>
               <div className="text-sm text-gray-600">Days Present</div>
             </div>
             <div className="bg-red-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-red-600">1</div>
+              <div className="text-2xl font-bold text-red-600">{absentCount}</div>
               <div className="text-sm text-gray-600">Days Absent</div>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-yellow-600">2</div>
-              <div className="text-sm text-gray-600">Times Late</div>
+              <div className="text-2xl font-bold text-yellow-600">{totalResults}</div>
+              <div className="text-sm text-gray-600">Total Assessments</div>
             </div>
           </div>
         </div>

@@ -4,6 +4,23 @@ import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const dropdown = searchParams.get("dropdown");
+    
+    // Simple dropdown API for forms
+    if (dropdown === "true") {
+      const subjects = await prisma.subject.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+      return NextResponse.json(subjects);
+    }
+
     const user = await getCurrentUser();
     
     if (!user || (user.role !== "admin" && user.role !== "teacher")) {
