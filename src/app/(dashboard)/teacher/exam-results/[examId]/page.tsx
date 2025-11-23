@@ -33,7 +33,6 @@ const TeacherExamResultsPage = async ({
             include: {
               student: {
                 include: {
-                  user: true,
                   class: true,
                 },
               },
@@ -48,7 +47,6 @@ const TeacherExamResultsPage = async ({
         include: {
           student: {
             include: {
-              user: true,
               class: true,
             },
           },
@@ -80,7 +78,8 @@ const TeacherExamResultsPage = async ({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Exam Results</h1>
           <p className="text-gray-600 mt-1">
-            {exam.title} - Grade {exam.grade.level} - {exam.examType.name}
+            {exam.title} - Grade {exam.grade.level}
+            {exam.examType && ` - ${exam.examType.name}`}
           </p>
         </div>
       </div>

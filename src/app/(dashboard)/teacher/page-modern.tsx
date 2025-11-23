@@ -173,13 +173,6 @@ const TeacherPageModern = async () => {
               iconBgColor="bg-purple-100"
             />
             <ModernActionCard
-              title="Student Results"
-              description="View and input results"
-              icon="/result.png"
-              href="/list/results"
-              iconBgColor="bg-orange-100"
-            />
-            <ModernActionCard
               title="Exam Management"
               description="Schedule and manage exams"
               icon="/exam.png"

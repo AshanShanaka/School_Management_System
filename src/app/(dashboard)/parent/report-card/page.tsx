@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ReportCardDemo from "@/components/ReportCardDemo";
+import ParentReportCardList from "@/components/ParentReportCardList";
 
 const ParentReportCardPage = async () => {
   const user = await getCurrentUser();
@@ -9,7 +9,7 @@ const ParentReportCardPage = async () => {
     redirect("/login");
   }
 
-  return <ReportCardDemo userRole="parent" />;
+  return <ParentReportCardList />;
 };
 
 export default ParentReportCardPage;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
+import { calculateGrade } from "@/lib/grading";
 
 const prisma = new PrismaClient();
 
@@ -51,9 +52,17 @@ export async function GET(
     // For teachers, check if they're assigned to this exam or are class teacher for this grade
     if (user.role === "teacher") {
       const isAssignedToExam = exam.examSubjects.some(es => es.teacherId === user.id);
-      // TODO: Check if user is class teacher for this grade
-      // For now, allow all teachers to view class reports
-      if (!isAssignedToExam) {
+      
+      // Check if teacher is class teacher for any class in this grade
+      const isClassTeacher = await prisma.class.findFirst({
+        where: {
+          gradeId: exam.gradeId,
+          classTeacherId: user.id, // Fixed: Use classTeacherId instead of teacherId
+        },
+      });
+      
+      // Allow access if teacher is assigned to exam OR is class teacher for this grade
+      if (!isAssignedToExam && !isClassTeacher) {
         return NextResponse.json({ 
           error: "You don't have permission to view this class report" 
         }, { status: 403 });
@@ -88,14 +97,7 @@ export async function GET(
     const studentsWithResults = students.map(student => {
       const results = student.examResults.map(result => {
         const percentage = (result.marks / result.examSubject.maxMarks) * 100;
-        let grade = "F";
-        if (percentage >= 90) grade = "A+";
-        else if (percentage >= 80) grade = "A";
-        else if (percentage >= 70) grade = "B+";
-        else if (percentage >= 60) grade = "B";
-        else if (percentage >= 50) grade = "C+";
-        else if (percentage >= 40) grade = "C";
-        else if (percentage >= 30) grade = "D";
+        const grade = calculateGrade(percentage);
 
         return {
           subject: result.examSubject.subject,
@@ -110,14 +112,7 @@ export async function GET(
       const totalMaxMarks = results.reduce((sum, r) => sum + r.maxMarks, 0);
       const overallPercentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
       
-      let overallGrade = "F";
-      if (overallPercentage >= 90) overallGrade = "A+";
-      else if (overallPercentage >= 80) overallGrade = "A";
-      else if (overallPercentage >= 70) overallGrade = "B+";
-      else if (overallPercentage >= 60) overallGrade = "B";
-      else if (overallPercentage >= 50) overallGrade = "C+";
-      else if (overallPercentage >= 40) overallGrade = "C";
-      else if (overallPercentage >= 30) overallGrade = "D";
+      const overallGrade = calculateGrade(overallPercentage);
 
       return {
         id: student.id,

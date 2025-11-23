@@ -78,7 +78,7 @@ const AssignmentForm = dynamic(() => import("./forms/AssignmentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
-const LessonForm = dynamic(() => import("./forms/LessonForm"), {
+const SimpleLessonForm = dynamic(() => import("./forms/SimpleLessonForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -186,9 +186,8 @@ const forms: {
     />
   ),
   lesson: (setOpen, type, data, relatedData) => (
-    <LessonForm
+    <SimpleLessonForm
       type={type}
-      data={data}
       setOpen={setOpen}
       relatedData={relatedData}
     />
@@ -237,6 +236,29 @@ const FormModal = ({
       : "bg-lamaPurple";
 
   const [open, setOpen] = useState(false);
+  
+  // Debug: Log whenever open state changes
+  useEffect(() => {
+    console.log("🔄 Modal open state changed:", open);
+    if (open) {
+      console.log("✅ Modal should now be visible!");
+    }
+  }, [open]);
+  
+  // Simple test handler
+  const handleButtonClick = () => {
+    console.log("========== BUTTON CLICK START ==========");
+    console.log("Current open state:", open);
+    console.log("Table:", table);
+    console.log("Type:", type);
+    console.log("Related Data:", relatedData);
+    
+    setOpen(true);
+    
+    console.log("setOpen(true) has been called");
+    console.log("========== BUTTON CLICK END ==========");
+  };
+  
   const [state, formAction] = useFormState<
     { success: boolean; error: boolean },
     FormData
@@ -317,26 +339,50 @@ const FormModal = ({
   return (
     <>
       <button
-        className={`${size} flex items-center justify-center rounded-full ${bgColor}`}
-        onClick={() => setOpen(true)}
+        className={`${size} flex items-center justify-center rounded-full ${bgColor} hover:opacity-80`}
+        onClick={handleButtonClick}
+        type="button"
+        style={{ 
+          cursor: 'pointer', 
+          zIndex: 1000, 
+          position: 'relative'
+        }}
+        title={`${type} ${table}`}
       >
-        <Image src={`/${type}.png`} alt="" width={16} height={16} />
+        <Image src={`/${type}.png`} alt={type} width={16} height={16} />
       </button>
+      
+      {/* Debug: Always show what open state is */}
+      {console.log("Rendering, open =", open)}
+      
       {open && (
-        <div className="w-screen h-screen absolute left-0 top-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
+        <div 
+          className="w-screen h-screen fixed left-0 top-0 bg-black bg-opacity-60 z-[9999] flex items-center justify-center"
+          onClick={() => {
+            console.log("Overlay clicked, closing modal");
+            setOpen(false);
+          }}
+        >
           <div
             className={`bg-white p-4 rounded-md relative ${
               table === "exam"
                 ? "w-[80%] md:w-[70%] lg:w-[60%] xl:w-[50%] 2xl:w-[40%]"
                 : "w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] 2xl:w-[40%]"
             }`}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent closing when clicking inside modal
+              console.log("Modal content clicked (should not close)");
+            }}
           >
             <Form />
             <div
               className="absolute top-4 right-4 cursor-pointer"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                console.log("Close button clicked");
+                setOpen(false);
+              }}
             >
-              <Image src="/close.png" alt="" width={14} height={14} />
+              <Image src="/close.png" alt="close" width={14} height={14} />
             </div>
           </div>
         </div>

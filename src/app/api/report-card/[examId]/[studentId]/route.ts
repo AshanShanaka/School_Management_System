@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
+import { calculateGrade } from "@/lib/grading";
 
 const prisma = new PrismaClient();
 
@@ -88,17 +89,10 @@ export async function GET(
       },
     });
 
-    // Process results and calculate grades
+    // Process results and calculate grades (Sri Lankan Grading System with plus grades)
     const results = examResults.map(result => {
       const percentage = (result.marks / result.examSubject.maxMarks) * 100;
-      let grade = "F";
-      if (percentage >= 90) grade = "A+";
-      else if (percentage >= 80) grade = "A";
-      else if (percentage >= 70) grade = "B+";
-      else if (percentage >= 60) grade = "B";
-      else if (percentage >= 50) grade = "C+";
-      else if (percentage >= 40) grade = "C";
-      else if (percentage >= 30) grade = "D";
+      const grade = calculateGrade(percentage);
 
       return {
         subject: {
@@ -119,14 +113,7 @@ export async function GET(
     const totalMaxMarks = results.reduce((sum, r) => sum + r.maxMarks, 0);
     const overallPercentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
     
-    let overallGrade = "F";
-    if (overallPercentage >= 90) overallGrade = "A+";
-    else if (overallPercentage >= 80) overallGrade = "A";
-    else if (overallPercentage >= 70) overallGrade = "B+";
-    else if (overallPercentage >= 60) overallGrade = "B";
-    else if (overallPercentage >= 50) overallGrade = "C+";
-    else if (overallPercentage >= 40) overallGrade = "C";
-    else if (overallPercentage >= 30) overallGrade = "D";
+    const overallGrade = calculateGrade(overallPercentage);
 
     // Get all students in the same grade for ranking
     const allStudentsInGrade = await prisma.student.findMany({

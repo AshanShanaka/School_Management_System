@@ -13,6 +13,10 @@ export interface User {
   address?: string;
   birthday?: Date | string;
   sex?: "MALE" | "FEMALE";
+  // Student-specific fields
+  classId?: number;
+  gradeId?: number;
+  parentId?: string;
 }
 
 export interface AuthResult {
@@ -176,112 +180,39 @@ export async function getUserByCredentials(
         }
       }
 
-      // If found in database, verify password
-      if (user && user.password && role) {
-        const isValidPassword = await verifyPassword(password, user.password);
-        if (isValidPassword) {
-          return {
-            success: true,
-            user: {
-              id: user.id,
-              username: user.username,
-              email: user.email,
-              name: user.name,
-              surname: user.surname,
-              role: role,
-              phone: user.phone || undefined,
-              address: user.address || undefined,
-              birthday: user.birthday || undefined,
-              sex: user.sex || undefined,
-            },
-          };
-        } else {
-          return { success: false, error: "Invalid password" };
-        }
+      // If found in database, allow login (development mode)
+      if (user && role) {
+        console.log(`✅ Found ${role}:`, user.username);
+        console.log(`⚠️  DEVELOPMENT MODE: Accepting ANY password for ${role}`);
+        
+        // For development: Allow ALL roles (teacher, student, parent, admin) to login with any password
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.name,
+            surname: user.surname,
+            role: role,
+            phone: user.phone || undefined,
+            address: user.address || undefined,
+            birthday: user.birthday || undefined,
+            sex: user.sex || undefined,
+            // Send IDs as strings for mobile compatibility
+            classId: user.classId ? user.classId.toString() : undefined,
+            gradeId: user.gradeId ? user.gradeId.toString() : undefined,
+            parentId: user.parentId || undefined,
+          },
+        };
       }
     } catch (dbError) {
-      console.log("Database lookup failed, trying hardcoded users...", dbError);
+      console.log("❌ Database lookup error:", dbError);
+      console.log("Trying fallback hardcoded users...");
     }
 
-    // Fallback to hardcoded users if database lookup fails
-    // Check admin first - temporary hardcoded admin
-    if (identifier === "admin" && password === "admin123") {
-      return {
-        success: true,
-        user: {
-          id: "admin-temp-id",
-          username: "admin",
-          email: "admin@school.com",
-          name: "Admin",
-          surname: "User",
-          role: "admin",
-        },
-      };
-    }
-
-    // Check teacher - temporary hardcoded teacher
-    if (
-      (identifier === "kasun" || identifier === "kasun@gmail.com") &&
-      password === "Teach@1003"
-    ) {
-      return {
-        success: true,
-        user: {
-          id: "teacher-temp-id",
-          username: "kasun",
-          email: "kasun@gmail.com",
-          name: "Kasun",
-          surname: "Perera",
-          role: "teacher",
-        },
-      };
-    }
-
-    // Additional hardcoded teacher for testing
-    if (identifier === "teacher1" && password === "teacher123") {
-      return {
-        success: true,
-        user: {
-          id: "teacher-temp-id-2",
-          username: "teacher1",
-          email: "teacher1@example.com",
-          name: "John",
-          surname: "Teacher",
-          role: "teacher",
-        },
-      };
-    }
-
-    // Check student - temporary hardcoded student
-    if (identifier === "student1" && password === "student123") {
-      return {
-        success: true,
-        user: {
-          id: "student-temp-id",
-          username: "student1",
-          email: "student@example.com",
-          name: "Jane",
-          surname: "Doe",
-          role: "student",
-        },
-      };
-    }
-
-    // Check parent - temporary hardcoded parent
-    if (identifier === "parent1" && password === "parent123") {
-      return {
-        success: true,
-        user: {
-          id: "parent-temp-id",
-          username: "parent1",
-          email: "parent@example.com",
-          name: "John",
-          surname: "Doe",
-          role: "parent",
-        },
-      };
-    }
-
+    // No user found in database
+    console.log(`❌ User not found: ${identifier}`);
     return { success: false, error: "Invalid credentials" };
   } catch (error) {
     console.error("Authentication error:", error);

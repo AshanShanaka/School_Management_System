@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
+import Link from "next/link";
 
 import { getCurrentUser } from "@/lib/auth";
 
@@ -196,9 +197,37 @@ const ResultListPage = async ({
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+      {/* HEADER with Historical Marks Links for Admin */}
+      {role === "admin" && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-1">Historical Marks Management</h2>
+              <p className="text-sm text-gray-600">Manage Grade 9 & 10 historical marks for O/L predictions</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin/previous-marks-records"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                <Image src="/result.png" alt="" width={16} height={16} />
+                <span className="font-medium">Previous Marks Records</span>
+              </Link>
+              <Link
+                href="/admin/historical-marks-import"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+              >
+                <Image src="/upload.png" alt="" width={16} height={16} />
+                <span className="font-medium">Import Historical Marks</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Results</h1>
+        <h1 className="hidden md:block text-lg font-semibold">All Results (Assignments)</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">

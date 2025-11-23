@@ -14,6 +14,7 @@ type Student = {
   surname: string;
   email: string;
   username: string;
+  indexNumber?: string;
   phone?: string;
   address?: string;
   img?: string;
@@ -58,6 +59,7 @@ const StudentListPage = () => {
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"list" | "class">("list");
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  const [bulkGenerating, setBulkGenerating] = useState(false);
 
   const fetchData = async (page = 1, search = "", classId = "") => {
     try {
@@ -190,6 +192,36 @@ const StudentListPage = () => {
     fetchData(currentPage, searchTerm, selectedClassId);
   };
 
+  const handleBulkGenerateIndexNumbers = async () => {
+    if (!confirm("Generate index numbers for all students without one? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setBulkGenerating(true);
+      const response = await fetch("/api/students/index-number", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefix: "" }),
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Successfully generated ${data.count} index numbers!`);
+        fetchData(currentPage, searchTerm, selectedClassId);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to generate index numbers");
+      }
+    } catch (error) {
+      console.error("Error bulk generating index numbers:", error);
+      toast.error("An error occurred while generating index numbers");
+    } finally {
+      setBulkGenerating(false);
+    }
+  };
+
   // Group students by class for class view
   const groupStudentsByClass = () => {
     const grouped: { [key: string]: Student[] } = {};
@@ -218,6 +250,7 @@ const StudentListPage = () => {
 
   const columns = [
     { header: "Info", accessor: "info" },
+    { header: "Index No.", accessor: "indexNumber", className: "hidden lg:table-cell" },
     { header: "Class", accessor: "class", className: "hidden md:table-cell" },
     { header: "Parent/Guardian", accessor: "parent", className: "hidden md:table-cell" },
     { header: "Phone", accessor: "phone", className: "hidden lg:table-cell" },
@@ -251,6 +284,15 @@ const StudentListPage = () => {
           <p className="text-xs text-gray-500">{item.email}</p>
           <p className="text-xs text-indigo-600 font-medium">@{item.username}</p>
         </div>
+      </td>
+      <td className="hidden lg:table-cell">
+        {item.indexNumber ? (
+          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+            {item.indexNumber}
+          </span>
+        ) : (
+          <span className="text-gray-400 text-sm">Not set</span>
+        )}
       </td>
       <td className="hidden md:table-cell">
         {item.class ? (
@@ -354,19 +396,39 @@ const StudentListPage = () => {
                 <Image src="/sort.png" alt="" width={18} height={18} />
               </button>
               {user?.role === "admin" && (
-                <button
-                  onClick={handleCreateStudent}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium transition-all shadow-md transform hover:scale-105"
-                  title="Add New Student"
-                >
-                  <Image
-                    src="/create.png"
-                    alt="Add Student"
-                    width={16}
-                    height={16}
-                  />
-                  <span className="hidden sm:inline">Add Student</span>
-                </button>
+                <>
+                  <button
+                    onClick={handleBulkGenerateIndexNumbers}
+                    disabled={bulkGenerating}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium transition-all shadow-md transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Auto-Generate Index Numbers"
+                  >
+                    {bulkGenerating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span className="hidden md:inline">Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-lg">🔢</span>
+                        <span className="hidden md:inline">Auto Index</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleCreateStudent}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium transition-all shadow-md transform hover:scale-105"
+                    title="Add New Student"
+                  >
+                    <Image
+                      src="/create.png"
+                      alt="Add Student"
+                      width={16}
+                      height={16}
+                    />
+                    <span className="hidden sm:inline">Add Student</span>
+                  </button>
+                </>
               )}
             </div>
           </div>

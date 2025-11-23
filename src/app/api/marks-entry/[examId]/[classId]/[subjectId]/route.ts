@@ -168,10 +168,10 @@ export async function POST(
     // Calculate grades for each mark
     const calculateGrade = (marks: number, maxMarks: number): string => {
       const percentage = (marks / maxMarks) * 100;
-      if (percentage >= 85) return "A";
-      if (percentage >= 70) return "B";
-      if (percentage >= 55) return "C";
-      if (percentage >= 40) return "S";
+      if (percentage >= 75) return "A";
+      if (percentage >= 65) return "B";
+      if (percentage >= 50) return "C";
+      if (percentage >= 35) return "S";
       return "F";
     };
 

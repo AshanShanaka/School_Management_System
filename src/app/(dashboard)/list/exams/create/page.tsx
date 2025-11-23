@@ -602,6 +602,9 @@ const CreateExamPage = () => {
                   className="flex-1 p-2 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <p className="text-xs text-blue-600 mt-1">
+                💡 You can select past dates for historical exam records
+              </p>
             </div>
 
             {/* Bulk Time Setting */}
@@ -658,7 +661,6 @@ const CreateExamPage = () => {
                     value={subject.examDate}
                     onChange={(e) => handleSubjectScheduleChange(subject.id, "examDate", e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    min={new Date().toISOString().split('T')[0]}
                   />
                 </div>
                 

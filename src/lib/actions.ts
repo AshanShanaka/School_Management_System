@@ -379,6 +379,7 @@ export const createStudent = async (
       data: {
         id: studentId,
         username: data.username,
+        indexNumber: data.indexNumber || null,
         password: hashedPassword,
         name: data.name,
         surname: data.surname,
@@ -413,6 +414,7 @@ export const updateStudent = async (
     // Prepare update data for the student
     const updateData: any = {
       username: data.username,
+      indexNumber: data.indexNumber || null,
       name: data.name,
       surname: data.surname,
       email: data.email || null,
@@ -625,12 +627,23 @@ export const createLesson = async (
     const { name, day, startTime, endTime, subjectId, classId, teacherId } =
       Object.fromEntries(data);
 
+    console.log("Creating lesson with data:", { name, day, startTime, endTime, subjectId, classId, teacherId });
+
+    // Parse datetime-local input format (YYYY-MM-DDTHH:mm)
+    // Extract only the time portion for the lesson
+    const startTimeObj = new Date(startTime as string);
+    const endTimeObj = new Date(endTime as string);
+    
+    // Create dates with time only (using a fixed date for time storage)
+    const startTimeDate = new Date(`1970-01-01T${startTimeObj.getHours().toString().padStart(2, '0')}:${startTimeObj.getMinutes().toString().padStart(2, '0')}:00`);
+    const endTimeDate = new Date(`1970-01-01T${endTimeObj.getHours().toString().padStart(2, '0')}:${endTimeObj.getMinutes().toString().padStart(2, '0')}:00`);
+
     await prisma.lesson.create({
       data: {
         name: name as string,
         day: day as Day,
-        startTime: new Date(`1970-01-01T${startTime}:00`),
-        endTime: new Date(`1970-01-01T${endTime}:00`),
+        startTime: startTimeDate,
+        endTime: endTimeDate,
         subjectId: parseInt(subjectId as string),
         classId: parseInt(classId as string),
         teacherId: teacherId as string,
@@ -640,8 +653,12 @@ export const createLesson = async (
     revalidatePath("/list/lessons");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error("Error creating lesson:", err);
+    return { 
+      success: false, 
+      error: true,
+      message: err instanceof Error ? err.message : "Failed to create lesson"
+    };
   }
 };
 
@@ -653,6 +670,17 @@ export const updateLesson = async (
     const { id, name, day, startTime, endTime, subjectId, classId, teacherId } =
       Object.fromEntries(data);
 
+    console.log("Updating lesson with data:", { id, name, day, startTime, endTime, subjectId, classId, teacherId });
+
+    // Parse datetime-local input format (YYYY-MM-DDTHH:mm)
+    // Extract only the time portion for the lesson
+    const startTimeObj = new Date(startTime as string);
+    const endTimeObj = new Date(endTime as string);
+    
+    // Create dates with time only (using a fixed date for time storage)
+    const startTimeDate = new Date(`1970-01-01T${startTimeObj.getHours().toString().padStart(2, '0')}:${startTimeObj.getMinutes().toString().padStart(2, '0')}:00`);
+    const endTimeDate = new Date(`1970-01-01T${endTimeObj.getHours().toString().padStart(2, '0')}:${endTimeObj.getMinutes().toString().padStart(2, '0')}:00`);
+
     await prisma.lesson.update({
       where: {
         id: parseInt(id as string),
@@ -660,8 +688,8 @@ export const updateLesson = async (
       data: {
         name: name as string,
         day: day as Day,
-        startTime: new Date(`1970-01-01T${startTime}:00`),
-        endTime: new Date(`1970-01-01T${endTime}:00`),
+        startTime: startTimeDate,
+        endTime: endTimeDate,
         subjectId: parseInt(subjectId as string),
         classId: parseInt(classId as string),
         teacherId: teacherId as string,
@@ -671,8 +699,12 @@ export const updateLesson = async (
     revalidatePath("/list/lessons");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error("Error updating lesson:", err);
+    return { 
+      success: false, 
+      error: true,
+      message: err instanceof Error ? err.message : "Failed to update lesson"
+    };
   }
 };
 
@@ -682,6 +714,14 @@ export const deleteLesson = async (
 ) => {
   const id = data.get("id") as string;
   try {
+    // First, delete all assignments related to this lesson
+    await prisma.assignment.deleteMany({
+      where: {
+        lessonId: parseInt(id),
+      },
+    });
+
+    // Then delete the lesson
     await prisma.lesson.delete({
       where: {
         id: parseInt(id),

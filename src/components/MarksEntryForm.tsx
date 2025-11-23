@@ -65,11 +65,10 @@ const MarksEntryForm: React.FC<MarksEntryFormProps> = ({
   const calculateGrade = (marks: number, maxMarks: number): string => {
     const percentage = (marks / maxMarks) * 100;
     
-    if (percentage >= 85) return "A";
-    if (percentage >= 75) return "B";
-    if (percentage >= 65) return "C";
-    if (percentage >= 55) return "S";
-    if (percentage >= 35) return "W";
+    if (percentage >= 75) return "A";
+    if (percentage >= 65) return "B";
+    if (percentage >= 50) return "C";
+    if (percentage >= 35) return "S";
     return "F";
   };
 

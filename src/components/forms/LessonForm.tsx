@@ -23,6 +23,8 @@ const LessonForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
+  console.log("🎯 LessonForm loaded!", { type, hasData: !!data, relatedData });
+  
   const {
     register,
     handleSubmit,
@@ -59,28 +61,82 @@ const LessonForm = ({
     }
   );
 
+  const router = useRouter();
+
+  const { subjects = [], classes = [] } = relatedData || {};
+  const { user } = useAuth();
+  const userId = user?.id;
+  const userRole = user?.role;
+
+  console.log("📊 Form State:", { user, userId, userRole, subjectsCount: subjects.length, classesCount: classes.length });
+
+  // Filter subjects to show only those assigned to the teacher
+  const teacherSubjects = subjects.filter((subject: any) =>
+    subject.teachers?.some((teacher: any) => teacher.id === userId)
+  );
+
+  // For teachers, get their first assigned subject (they should only have one as subject teacher)
+  const teacherAssignedSubject = teacherSubjects.length > 0 ? teacherSubjects[0] : null;
+
+  // Safety check: If no subjects or classes, show error
+  if (!subjects || subjects.length === 0) {
+    return (
+      <div className="p-4">
+        <h1 className="text-xl font-semibold text-red-600">Error Loading Form</h1>
+        <p className="mt-2">No subjects found. Please ensure subjects are created in the system.</p>
+        <button
+          onClick={() => setOpen(false)}
+          className="mt-4 bg-gray-400 text-white p-2 rounded-md"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  if (!classes || classes.length === 0) {
+    return (
+      <div className="p-4">
+        <h1 className="text-xl font-semibold text-red-600">Error Loading Form</h1>
+        <p className="mt-2">No classes found. Please ensure classes are created in the system.</p>
+        <button
+          onClick={() => setOpen(false)}
+          className="mt-4 bg-gray-400 text-white p-2 rounded-md"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
   const onSubmit = handleSubmit((formData) => {
     console.log("Submitting lesson data:", formData);
+    
+    // If teacher and creating new lesson, automatically set their subject and teacherId
+    if (userRole === "teacher" && type === "create") {
+      if (teacherAssignedSubject) {
+        formData.subjectId = teacherAssignedSubject.id;
+      }
+      // Auto-assign the teacher's own ID
+      if (userId) {
+        formData.teacherId = userId;
+      }
+    }
+    
     // Create FormData object from the parsed data
     const form = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        form.append(key, value.toString());
+        // Handle Date objects specially
+        if (value instanceof Date) {
+          form.append(key, value.toISOString());
+        } else {
+          form.append(key, value.toString());
+        }
       }
     });
     formAction(form);
   });
-
-  const router = useRouter();
-
-  const { subjects, classes } = relatedData;
-  const { user } = useAuth();
-  const userId = user?.id;
-
-  // Filter subjects to show only those assigned to the teacher
-  const teacherSubjects = subjects.filter((subject: any) =>
-    subject.teachers.some((teacher: any) => teacher.id === userId)
-  );
 
   useEffect(() => {
     if (state.success) {
@@ -200,25 +256,61 @@ const LessonForm = ({
             </p>
           )}
         </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Subject</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("subjectId")}
-            defaultValue={data?.subjectId}
-          >
-            {teacherSubjects.map((subject: { id: number; name: string }) => (
-              <option value={subject.id} key={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
-          {errors.subjectId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.subjectId.message.toString()}
-            </p>
-          )}
-        </div>
+        
+        {/* Subject Field - Hidden for teachers, shown for admins */}
+        {userRole === "admin" ? (
+          <div className="flex flex-col gap-2 w-full md:w-1/4">
+            <label className="text-xs text-gray-500">Subject</label>
+            <select
+              className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+              {...register("subjectId")}
+              defaultValue={data?.subjectId}
+            >
+              {subjects.map((subject: { id: number; name: string }) => (
+                <option value={subject.id} key={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+            {errors.subjectId?.message && (
+              <p className="text-xs text-red-400">
+                {errors.subjectId.message.toString()}
+              </p>
+            )}
+          </div>
+        ) : (
+          // For teachers, show their assigned subject as read-only
+          teacherAssignedSubject && (
+            <div className="flex flex-col gap-2 w-full md:w-1/4">
+              <label className="text-xs text-gray-500">Subject</label>
+              <input
+                type="text"
+                className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full bg-gray-100 cursor-not-allowed"
+                value={teacherAssignedSubject.name}
+                disabled
+                readOnly
+              />
+              <input
+                type="hidden"
+                {...register("subjectId")}
+                value={teacherAssignedSubject.id}
+              />
+              <p className="text-xs text-gray-500">
+                (Auto-assigned based on your subject)
+              </p>
+            </div>
+          )
+        )}
+        
+        {/* Hidden teacher ID field - auto-assigned for teachers, admin needs to select */}
+        {userRole === "teacher" ? (
+          <input
+            type="hidden"
+            {...register("teacherId")}
+            value={userId || ""}
+          />
+        ) : null}
+        
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Class</label>
           <select

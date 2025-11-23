@@ -130,19 +130,18 @@ const ExamResultsClient: React.FC<ExamResultsClientProps> = ({
   const getGradeBadgeClass = (grade: string) => {
     const baseClasses = "px-2 py-1 rounded text-xs font-medium";
     switch (grade) {
-      case "A+":
       case "A":
         return `${baseClasses} bg-green-100 text-green-800`;
-      case "B+":
       case "B":
         return `${baseClasses} bg-blue-100 text-blue-800`;
-      case "C+":
       case "C":
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case "D":
+      case "S":
         return `${baseClasses} bg-orange-100 text-orange-800`;
-      case "F":
+      case "W":
         return `${baseClasses} bg-red-100 text-red-800`;
+      case "AB":
+        return `${baseClasses} bg-gray-100 text-gray-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }

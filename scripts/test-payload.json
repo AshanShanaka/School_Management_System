@@ -1,0 +1,8 @@
+{
+  "subjects": [
+    {"name": "Mathematics", "marks": [75, 80, 78, 82]},
+    {"name": "Science", "marks": [68, 72, 70]},
+    {"name": "English", "marks": [85, 88, 86]}
+  ],
+  "attendance": 85
+}

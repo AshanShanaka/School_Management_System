@@ -24,6 +24,7 @@ model Admin {
 model Student {
   id             String          @id @default(cuid())
   username       String          @unique
+  indexNumber    String?         @unique // Student admission/index number
   name           String
   surname        String
   email          String?         @unique
@@ -74,6 +75,7 @@ model Teacher {
   subjects               Subject[]               @relation("SubjectToTeacher")
   workflows              ExamWorkflow[]
   reportWorkflows        ReportWorkflow[]
+  reportCardGenerations  ReportCardGeneration[]  @relation("ReportCardGenerationTeacher")
   attendanceMarked       Attendance[]            @relation("AttendanceMarkedBy")
   classTeacherAssignments ClassTeacherAssignment[] // History of assignments
   parentMeetings         ParentMeeting[]         // Meetings scheduled by class teacher
@@ -142,6 +144,7 @@ model Class {
   attendance            Attendance[]
   reportCards           ReportCard[]
   reportWorkflows       ReportWorkflow[]
+  reportCardGenerations ReportCardGeneration[]  @relation("ReportCardGenerationClass")
   schoolTimetable       SchoolTimetable?        // One timetable per class
 }
 
@@ -205,6 +208,7 @@ model Exam {
   examSupervisors    ExamSupervisor[]
   reportCards        ReportCard[]
   reportWorkflows    ReportWorkflow[]
+  reportCardGenerations ReportCardGeneration[] @relation("ReportCardGenerationExam")
 
   @@unique([year, term, gradeId, examTypeEnum])
 }
@@ -307,18 +311,19 @@ model Result {
 }
 
 model Attendance {
-  id        Int      @id @default(autoincrement())
+  id        Int              @id @default(autoincrement())
   date      DateTime
-  present   Boolean
+  present   Boolean          // Kept for backward compatibility
+  status    AttendanceStatus @default(PRESENT) // New daily attendance status
   studentId String
   classId   Int
   teacherId String
   notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  class     Class    @relation(fields: [classId], references: [id])
-  student   Student  @relation(fields: [studentId], references: [id])
-  teacher   Teacher  @relation("AttendanceMarkedBy", fields: [teacherId], references: [id])
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  class     Class            @relation(fields: [classId], references: [id])
+  student   Student          @relation(fields: [studentId], references: [id])
+  teacher   Teacher          @relation("AttendanceMarkedBy", fields: [teacherId], references: [id])
 
   @@unique([studentId, classId, date])
 }
@@ -353,6 +358,12 @@ enum Day {
   WEDNESDAY
   THURSDAY
   FRIDAY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
 }
 
 enum ExamStatus {
@@ -427,6 +438,7 @@ model ReportCard {
   examId          Int
   classId         Int
   studentId       String
+  generationId    String?          // Link to generation batch
   status          ReportCardStatus @default(DRAFT)
   totalMarks      Int?
   maxMarks        Int?
@@ -448,9 +460,44 @@ model ReportCard {
   class           Class            @relation(fields: [classId], references: [id])
   student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   approver        Admin?           @relation(fields: [approvedBy], references: [id])
+  generation      ReportCardGeneration? @relation(fields: [generationId], references: [id])
   subjects        ReportCardSubject[]
   
   @@unique([examId, classId, studentId])
+  @@index([generationId])
+}
+
+// Report Card Generation History/Labels
+model ReportCardGeneration {
+  id              String           @id @default(cuid())
+  examId          Int
+  classId         Int
+  teacherId       String
+  label           String           // "2025 Term 1 Final Exam - Grade 10A"
+  examTitle       String
+  examYear        Int
+  examTerm        Int
+  examType        String
+  className       String
+  gradeLevel      Int
+  totalStudents   Int
+  averagePercentage Float?
+  generatedAt     DateTime         @default(now())
+  status          String           @default("COMPLETED") // COMPLETED, FAILED
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  exam            Exam             @relation("ReportCardGenerationExam", fields: [examId], references: [id], onDelete: Cascade)
+  class           Class            @relation("ReportCardGenerationClass", fields: [classId], references: [id], onDelete: Cascade)
+  teacher         Teacher          @relation("ReportCardGenerationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  reportCards     ReportCard[]
+  
+  @@index([teacherId])
+  @@index([examId])
+  @@index([classId])
+  @@index([generatedAt])
+  @@map("report_card_generations")
 }
 
 model ReportCardSubject {

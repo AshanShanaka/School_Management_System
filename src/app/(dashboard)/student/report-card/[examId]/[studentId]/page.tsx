@@ -100,19 +100,18 @@ const ReportCardPage = async ({ params }: ReportCardPageProps) => {
   const getGradeBadgeClass = (grade: string) => {
     const baseClasses = "px-2 py-1 rounded text-xs font-medium";
     switch (grade) {
-      case "A+":
       case "A":
         return `${baseClasses} bg-green-100 text-green-800`;
-      case "B+":
       case "B":
         return `${baseClasses} bg-blue-100 text-blue-800`;
-      case "C+":
       case "C":
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case "D":
+      case "S":
         return `${baseClasses} bg-orange-100 text-orange-800`;
-      case "F":
+      case "W":
         return `${baseClasses} bg-red-100 text-red-800`;
+      case "AB":
+        return `${baseClasses} bg-gray-100 text-gray-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }
@@ -340,8 +339,8 @@ const ReportCardPage = async ({ params }: ReportCardPageProps) => {
         {/* Grade Distribution */}
         <div className="p-8 border-t border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Grade Distribution</h2>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-            {["A+", "A", "B+", "B", "C+", "C", "D", "F"].map(grade => {
+          <div className="grid grid-cols-5 gap-4">
+            {["A", "B", "C", "S", "W"].map(grade => {
               const count = reportCard.subjects.filter(s => s.grade === grade).length;
               return (
                 <div key={grade} className="text-center">
@@ -365,28 +364,6 @@ const ReportCardPage = async ({ params }: ReportCardPageProps) => {
           </p>
         </div>
       </div>
-
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          .print\\:hidden {
-            display: none !important;
-          }
-          .print\\:bg-blue-600 {
-            background-color: #2563eb !important;
-            -webkit-print-color-adjust: exact;
-          }
-          .print\\:shadow-none {
-            box-shadow: none !important;
-          }
-          .print\\:border-0 {
-            border: none !important;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-          }
-        }
-      `}</style>
     </div>
   );
 };

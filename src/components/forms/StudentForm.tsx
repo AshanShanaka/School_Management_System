@@ -51,12 +51,37 @@ const StudentForm = ({
 
   const [img, setImg] = useState<any>();
   const [password, setPassword] = useState("");
+  const [autoGenerateIndex, setAutoGenerateIndex] = useState(false);
+  const [generatingIndex, setGeneratingIndex] = useState(false);
+  const [indexNumber, setIndexNumber] = useState(data?.indexNumber || "");
+
+  // Auto-generate index number
+  const handleGenerateIndexNumber = async () => {
+    try {
+      setGeneratingIndex(true);
+      const response = await fetch("/api/students/index-number?prefix=");
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIndexNumber(data.indexNumber);
+        toast("Index number generated: " + data.indexNumber);
+      } else {
+        toast("Failed to generate index number");
+      }
+    } catch (error) {
+      console.error("Error generating index number:", error);
+      toast("Error generating index number");
+    } finally {
+      setGeneratingIndex(false);
+    }
+  };
 
   // Wrapper functions to handle FormData conversion
   const createStudentAction = async (state: any, formData: FormData) => {
     const data = {
       id: formData.get("id") as string,
       username: formData.get("username") as string,
+      indexNumber: formData.get("indexNumber") as string,
       password: formData.get("password") as string,
       name: formData.get("name") as string,
       surname: formData.get("surname") as string,
@@ -77,6 +102,7 @@ const StudentForm = ({
     const data = {
       id: formData.get("id") as string,
       username: formData.get("username") as string,
+      indexNumber: formData.get("indexNumber") as string,
       password: formData.get("password") as string,
       name: formData.get("name") as string,
       surname: formData.get("surname") as string,
@@ -138,6 +164,43 @@ const StudentForm = ({
         Authentication Information
       </span>
       <div className="flex justify-between flex-wrap gap-4">
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Student Index Number</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              {...register("indexNumber")}
+              value={indexNumber}
+              onChange={(e) => setIndexNumber(e.target.value)}
+              placeholder="e.g., 20250001"
+              className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm flex-1"
+            />
+            <button
+              type="button"
+              onClick={handleGenerateIndexNumber}
+              disabled={generatingIndex}
+              className="px-3 py-2 bg-indigo-500 text-white rounded-md text-xs hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              title="Auto-generate index number"
+            >
+              {generatingIndex ? (
+                <span className="flex items-center gap-1">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                  Generating...
+                </span>
+              ) : (
+                "Auto-Generate"
+              )}
+            </button>
+          </div>
+          {errors?.indexNumber && (
+            <p className="text-xs text-red-400">
+              {errors.indexNumber.message?.toString()}
+            </p>
+          )}
+          <p className="text-xs text-gray-400">
+            Leave empty or click "Auto-Generate" for automatic number
+          </p>
+        </div>
         <InputField
           label="Student Email"
           name="email"

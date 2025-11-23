@@ -3,8 +3,38 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import Image from "next/image";
 import Link from "next/link";
+import {
+  Box,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Typography,
+  Button,
+  Chip,
+  LinearProgress,
+  IconButton,
+  Container,
+  Paper,
+  Stack,
+  Avatar,
+  Tooltip,
+  Divider,
+  Alert,
+  AlertTitle,
+} from "@mui/material";
+import {
+  Assessment as AssessmentIcon,
+  School as SchoolIcon,
+  CheckCircle as CheckCircleIcon,
+  Pending as PendingIcon,
+  Edit as EditIcon,
+  Visibility as VisibilityIcon,
+  MenuBook as MenuBookIcon,
+  TrendingUp as TrendingUpIcon,
+} from "@mui/icons-material";
+import { green, orange, blue, purple, grey } from "@mui/material/colors";
 
 interface ExamSubject {
   id: number;
@@ -75,214 +105,374 @@ const TeacherMarksEntryDashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PUBLISHED":
-        return "bg-green-100 text-green-800";
+        return "success";
       case "MARKS_ENTRY":
-        return "bg-blue-100 text-blue-800";
+        return "info";
       case "CLASS_REVIEW":
-        return "bg-yellow-100 text-yellow-800";
+        return "warning";
       case "DRAFT":
-        return "bg-gray-100 text-gray-800";
+        return "default";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "default";
     }
   };
 
+  const progressPercentage = stats.totalSubjects > 0 
+    ? Math.round((stats.completedSubjects / stats.totalSubjects) * 100) 
+    : 0;
+
   if (loading) {
     return (
-      <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span className="ml-2">Loading your assigned exams...</span>
-        </div>
-      </div>
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Paper elevation={0} sx={{ p: 4, textAlign: "center" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <LinearProgress sx={{ width: "100%", maxWidth: 400 }} />
+            <Typography variant="body1" color="text.secondary">
+              Loading your assigned exams...
+            </Typography>
+          </Box>
+        </Paper>
+      </Container>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-md flex-1 m-4 mt-0">
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Marks Entry Dashboard</h1>
-          <p className="text-gray-600">Manage marks for your assigned subjects</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/list/exams"
-            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 flex items-center gap-2"
-          >
-            <Image src="/exam.png" alt="Exams" width={16} height={16} />
-            View All Exams
+      <Box sx={{ mb: 4 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+              📝 Marks Entry Dashboard
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Manage marks for your assigned subjects
+            </Typography>
+          </Box>
+          <Link href="/list/exams" style={{ textDecoration: "none" }}>
+            <Button
+              variant="contained"
+              startIcon={<AssessmentIcon />}
+              sx={{
+                bgcolor: grey[600],
+                "&:hover": { bgcolor: grey[700] },
+              }}
+            >
+              View All Exams
+            </Button>
           </Link>
-        </div>
-      </div>
+        </Stack>
+      </Box>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-600 text-sm font-medium">Active Exams</p>
-              <p className="text-3xl font-bold text-blue-900">{stats.activeExams}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-              <Image src="/exam.png" alt="Exams" width={24} height={24} />
-            </div>
-          </div>
-        </div>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            elevation={3}
+            sx={{
+              background: `linear-gradient(135deg, ${blue[50]} 0%, ${blue[100]} 100%)`,
+              border: `2px solid ${blue[200]}`,
+              height: "100%",
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="body2" color={blue[700]} fontWeight="medium" gutterBottom>
+                    Active Exams
+                  </Typography>
+                  <Typography variant="h3" fontWeight="bold" color={blue[900]}>
+                    {stats.activeExams}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: blue[500], width: 56, height: 56 }}>
+                  <AssessmentIcon sx={{ fontSize: 32 }} />
+                </Avatar>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-600 text-sm font-medium">Total Subjects</p>
-              <p className="text-3xl font-bold text-purple-900">{stats.totalSubjects}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-              <Image src="/subject.png" alt="Subjects" width={24} height={24} />
-            </div>
-          </div>
-        </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            elevation={3}
+            sx={{
+              background: `linear-gradient(135deg, ${purple[50]} 0%, ${purple[100]} 100%)`,
+              border: `2px solid ${purple[200]}`,
+              height: "100%",
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="body2" color={purple[700]} fontWeight="medium" gutterBottom>
+                    Total Subjects
+                  </Typography>
+                  <Typography variant="h3" fontWeight="bold" color={purple[900]}>
+                    {stats.totalSubjects}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: purple[500], width: 56, height: 56 }}>
+                  <MenuBookIcon sx={{ fontSize: 32 }} />
+                </Avatar>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-600 text-sm font-medium">Completed</p>
-              <p className="text-3xl font-bold text-green-900">{stats.completedSubjects}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-              <Image src="/result.png" alt="Completed" width={24} height={24} />
-            </div>
-          </div>
-        </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            elevation={3}
+            sx={{
+              background: `linear-gradient(135deg, ${green[50]} 0%, ${green[100]} 100%)`,
+              border: `2px solid ${green[200]}`,
+              height: "100%",
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="body2" color={green[700]} fontWeight="medium" gutterBottom>
+                    Completed
+                  </Typography>
+                  <Typography variant="h3" fontWeight="bold" color={green[900]}>
+                    {stats.completedSubjects}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: green[500], width: 56, height: 56 }}>
+                  <CheckCircleIcon sx={{ fontSize: 32 }} />
+                </Avatar>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg border border-orange-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-600 text-sm font-medium">Pending</p>
-              <p className="text-3xl font-bold text-orange-900">{stats.pendingSubjects}</p>
-            </div>
-            <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-              <Image src="/update.png" alt="Pending" width={24} height={24} />
-            </div>
-          </div>
-        </div>
-      </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            elevation={3}
+            sx={{
+              background: `linear-gradient(135deg, ${orange[50]} 0%, ${orange[100]} 100%)`,
+              border: `2px solid ${orange[200]}`,
+              height: "100%",
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="body2" color={orange[700]} fontWeight="medium" gutterBottom>
+                    Pending
+                  </Typography>
+                  <Typography variant="h3" fontWeight="bold" color={orange[900]}>
+                    {stats.pendingSubjects}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: orange[500], width: 56, height: 56 }}>
+                  <PendingIcon sx={{ fontSize: 32 }} />
+                </Avatar>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Progress Overview */}
       {stats.totalSubjects > 0 && (
-        <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Overall Progress</h3>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-gray-700">
-              Marks Entry Progress
-            </span>
-            <span className="text-sm text-gray-600">
-              {stats.completedSubjects} / {stats.totalSubjects} subjects completed
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${stats.totalSubjects > 0 ? (stats.completedSubjects / stats.totalSubjects) * 100 : 0}%` 
-              }}
-            />
-          </div>
-          <div className="text-right mt-2">
-            <span className="text-lg font-bold text-gray-800">
-              {stats.totalSubjects > 0 ? Math.round((stats.completedSubjects / stats.totalSubjects) * 100) : 0}%
-            </span>
-          </div>
-        </div>
+        <Card
+          elevation={2}
+          sx={{
+            mb: 4,
+            background: `linear-gradient(135deg, ${blue[50]} 0%, ${purple[50]} 100%)`,
+            border: `1px solid ${blue[100]}`,
+          }}
+        >
+          <CardContent>
+            <Stack spacing={2}>
+              <Stack direction="row" alignItems="center" gap={1}>
+                <TrendingUpIcon color="primary" />
+                <Typography variant="h6" fontWeight="bold">
+                  Overall Progress
+                </Typography>
+              </Stack>
+              <Divider />
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                  Marks Entry Progress
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {stats.completedSubjects} / {stats.totalSubjects} subjects completed
+                </Typography>
+              </Stack>
+              <Box sx={{ position: "relative", pt: 1 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={progressPercentage}
+                  sx={{
+                    height: 12,
+                    borderRadius: 6,
+                    bgcolor: grey[200],
+                    "& .MuiLinearProgress-bar": {
+                      borderRadius: 6,
+                      background: `linear-gradient(90deg, ${blue[500]} 0%, ${purple[500]} 100%)`,
+                    },
+                  }}
+                />
+                <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                  sx={{ textAlign: "right", mt: 1 }}
+                >
+                  {progressPercentage}%
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
       )}
 
       {/* Assigned Exams List */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Assigned Exams & Subjects</h3>
-        
+      <Box>
+        <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
+          📚 Your Assigned Exams & Subjects
+        </Typography>
+
         {assignedExams.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <div className="text-gray-400 mb-4">
-              <Image src="/exam.png" alt="No exams" width={64} height={64} className="mx-auto opacity-50" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-500 mb-2">No Assigned Exams</h3>
-            <p className="text-gray-400">You don't have any exam subjects assigned for marks entry yet.</p>
-          </div>
+          <Paper elevation={0} sx={{ p: 8, textAlign: "center", bgcolor: grey[50] }}>
+            <Avatar
+              sx={{
+                width: 80,
+                height: 80,
+                bgcolor: grey[200],
+                margin: "0 auto",
+                mb: 2,
+              }}
+            >
+              <AssessmentIcon sx={{ fontSize: 48, color: grey[400] }} />
+            </Avatar>
+            <Typography variant="h5" fontWeight="bold" color="text.secondary" gutterBottom>
+              No Assigned Exams
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              You don't have any exam subjects assigned for marks entry yet.
+            </Typography>
+          </Paper>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Grid container spacing={3}>
             {assignedExams.map((examSubject) => (
-              <div
-                key={`${examSubject.exam.id}-${examSubject.subject.id}`}
-                className={`border-2 rounded-lg p-6 transition-all hover:shadow-lg ${
-                  examSubject.marksEntered
-                    ? "border-green-200 bg-green-50"
-                    : "border-blue-200 bg-blue-50 hover:border-blue-300"
-                }`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-800 text-lg">
-                      {examSubject.exam.title}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      Grade {examSubject.exam.grade.level} • {examSubject.exam.year} • Term {examSubject.exam.term}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(examSubject.exam.status || 'DRAFT')}`}>
-                    {examSubject.exam.status ? examSubject.exam.status.replace("_", " ") : "DRAFT"}
-                  </span>
-                </div>
+              <Grid item xs={12} md={6} lg={4} key={`${examSubject.exam.id}-${examSubject.subject.id}`}>
+                <Card
+                  elevation={3}
+                  sx={{
+                    height: "100%",
+                    border: examSubject.marksEntered
+                      ? `2px solid ${green[300]}`
+                      : `2px solid ${blue[300]}`,
+                    bgcolor: examSubject.marksEntered ? green[50] : blue[50],
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 6,
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Stack spacing={2}>
+                      {/* Header */}
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="h6" fontWeight="bold" gutterBottom>
+                            {examSubject.exam.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Grade {examSubject.exam.grade.level} • {examSubject.exam.year} • Term{" "}
+                            {examSubject.exam.term}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={examSubject.exam.status?.replace("_", " ") || "DRAFT"}
+                          color={getStatusColor(examSubject.exam.status || "DRAFT") as any}
+                          size="small"
+                          sx={{ fontWeight: "medium" }}
+                        />
+                      </Stack>
 
-                <div className="mb-4">
-                  <div className="flex items-center mb-2">
-                    <Image src="/subject.png" alt="Subject" width={16} height={16} className="mr-2" />
-                    <span className="font-medium text-gray-800">{examSubject.subject.name}</span>
-                  </div>
-                  
-                  {examSubject.marksEntered ? (
-                    <div className="flex items-center text-green-600">
-                      <Image src="/result.png" alt="Completed" width={16} height={16} className="mr-2" />
-                      <span className="text-sm font-medium">Marks Entered</span>
-                      {examSubject.marksEnteredAt && (
-                        <span className="text-xs ml-2 text-green-500">
-                          ({new Date(examSubject.marksEnteredAt).toLocaleDateString()})
-                        </span>
+                      <Divider />
+
+                      {/* Subject */}
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <SchoolIcon color="action" fontSize="small" />
+                        <Typography variant="body1" fontWeight="medium">
+                          {examSubject.subject.name}
+                        </Typography>
+                      </Stack>
+
+                      {/* Status */}
+                      {examSubject.marksEntered ? (
+                        <Alert severity="success" icon={<CheckCircleIcon />} sx={{ py: 0 }}>
+                          <Stack direction="row" alignItems="center" justifyContent="space-between">
+                            <Typography variant="body2" fontWeight="medium">
+                              Marks Entered
+                            </Typography>
+                            {examSubject.marksEnteredAt && (
+                              <Typography variant="caption" color="text.secondary">
+                                {new Date(examSubject.marksEnteredAt).toLocaleDateString()}
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Alert>
+                      ) : (
+                        <Alert severity="warning" icon={<PendingIcon />} sx={{ py: 0 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            Marks Entry Pending
+                          </Typography>
+                        </Alert>
                       )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center text-orange-600">
-                      <Image src="/update.png" alt="Pending" width={16} height={16} className="mr-2" />
-                      <span className="text-sm font-medium">Marks Entry Pending</span>
-                    </div>
-                  )}
-                </div>
+                    </Stack>
+                  </CardContent>
 
-                <div className="flex gap-2">
-                  <Link
-                    href={`/teacher/marks-entry/${examSubject.exam.id}`}
-                    className={`flex-1 px-4 py-2 rounded-md text-center text-sm font-medium transition-colors ${
-                      examSubject.marksEntered
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {examSubject.marksEntered ? "Update Marks" : "Enter Marks"}
-                  </Link>
-                  
-                  <Link
-                    href={`/teacher/class-report/${examSubject.exam.id}`}
-                    className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                    title="View Class Report"
-                  >
-                    <Image src="/view.png" alt="View Report" width={16} height={16} />
-                  </Link>
-                </div>
-              </div>
+                  <CardActions sx={{ p: 2, pt: 0 }}>
+                    <Stack direction="row" spacing={1} width="100%">
+                      <Link
+                        href={`/teacher/marks-entry/${examSubject.exam.id}`}
+                        style={{ textDecoration: "none", flex: 1 }}
+                      >
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          startIcon={examSubject.marksEntered ? <EditIcon /> : <EditIcon />}
+                          sx={{
+                            bgcolor: examSubject.marksEntered ? green[600] : blue[600],
+                            "&:hover": {
+                              bgcolor: examSubject.marksEntered ? green[700] : blue[700],
+                            },
+                          }}
+                        >
+                          {examSubject.marksEntered ? "Update Marks" : "Enter Marks"}
+                        </Button>
+                      </Link>
+                      <Link
+                        href={`/teacher/exam-overview/${examSubject.exam.id}`}
+                        style={{ textDecoration: "none" }}
+                      >
+                        <Tooltip title="View Exam Overview">
+                          <IconButton
+                            sx={{
+                              border: `1px solid ${grey[300]}`,
+                              "&:hover": { bgcolor: grey[100] },
+                            }}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Link>
+                    </Stack>
+                  </CardActions>
+                </Card>
+              </Grid>
             ))}
-          </div>
+          </Grid>
         )}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 };
 

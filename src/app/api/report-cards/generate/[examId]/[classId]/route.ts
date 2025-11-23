@@ -75,18 +75,18 @@ export async function POST(
     // Calculate grades and generate report cards
     const calculateGrade = (marks: number, maxMarks: number): string => {
       const percentage = (marks / maxMarks) * 100;
-      if (percentage >= 85) return "A";
-      if (percentage >= 70) return "B";
-      if (percentage >= 55) return "C";
-      if (percentage >= 40) return "S";
+      if (percentage >= 75) return "A";
+      if (percentage >= 65) return "B";
+      if (percentage >= 50) return "C";
+      if (percentage >= 35) return "S";
       return "F";
     };
 
     const generateRemarks = (percentage: number): string => {
-      if (percentage >= 85) return "Excellent performance";
-      if (percentage >= 70) return "Good performance";
-      if (percentage >= 55) return "Satisfactory performance";
-      if (percentage >= 40) return "Needs improvement";
+      if (percentage >= 75) return "Excellent performance";
+      if (percentage >= 65) return "Good performance";
+      if (percentage >= 50) return "Satisfactory performance";
+      if (percentage >= 35) return "Needs improvement";
       return "Poor performance - requires attention";
     };
 
@@ -137,17 +137,18 @@ export async function POST(
             },
           });
 
-          // Create subject entries
+          // Create subject entries - always calculate grade from percentage
           for (const result of studentResults) {
+            const percentage = (result.marks / result.examSubject.maxMarks) * 100;
             await tx.reportCardSubject.create({
               data: {
                 reportCardId: reportCard.id,
                 subjectId: result.examSubject.subjectId,
                 marks: result.marks,
                 maxMarks: result.examSubject.maxMarks,
-                grade: result.grade || calculateGrade(result.marks, result.examSubject.maxMarks),
+                grade: calculateGrade(result.marks, result.examSubject.maxMarks),
                 classAverage: subjectAverages[result.examSubject.subjectId] || 0,
-                remarks: generateRemarks((result.marks / result.examSubject.maxMarks) * 100),
+                remarks: generateRemarks(percentage),
               },
             });
           }

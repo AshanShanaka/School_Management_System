@@ -29,6 +29,8 @@ const LessonListPage = async ({
   const user = await getCurrentUser();
   const role = user?.role;
 
+  console.log("Current user:", { id: user?.id, role: user?.role, name: user?.name });
+
   const columns = [
     {
       header: "Lesson Info",
@@ -144,6 +146,11 @@ const LessonListPage = async ({
 
   const query: Prisma.LessonWhereInput = {};
 
+  // If user is a teacher, only show their lessons
+  if (role === "teacher" && user?.id) {
+    query.teacherId = user.id;
+  }
+
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
@@ -152,7 +159,10 @@ const LessonListPage = async ({
             query.classId = parseInt(value);
             break;
           case "teacherId":
-            query.teacherId = value;
+            // Only allow admin to filter by teacherId
+            if (role === "admin") {
+              query.teacherId = value;
+            }
             break;
           case "search":
             query.OR = [

@@ -97,7 +97,8 @@ const ExamTimetableDetailPage = async ({
     });
   };
 
-  const formatTime = (timeString: string) => {
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return "N/A";
     const [hours, minutes] = timeString.split(":");
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? "PM" : "AM";
@@ -105,7 +106,8 @@ const ExamTimetableDetailPage = async ({
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
-  const calculateDuration = (startTime: string, endTime: string) => {
+  const calculateDuration = (startTime: string | null, endTime: string | null) => {
+    if (!startTime || !endTime) return "N/A";
     const [startHour, startMin] = startTime.split(":").map(Number);
     const [endHour, endMin] = endTime.split(":").map(Number);
     const totalMinutes = endHour * 60 + endMin - (startHour * 60 + startMin);

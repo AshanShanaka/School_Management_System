@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ParentMeetingsDemo from "@/components/ParentMeetingsDemo";
+import ParentMeetings from "@/components/ParentMeetings";
 
 const ParentMeetingsPage = async () => {
   const user = await getCurrentUser();
@@ -9,7 +9,7 @@ const ParentMeetingsPage = async () => {
     redirect("/login");
   }
 
-  return <ParentMeetingsDemo />;
+  return <ParentMeetings />;
 };
 
 export default ParentMeetingsPage;

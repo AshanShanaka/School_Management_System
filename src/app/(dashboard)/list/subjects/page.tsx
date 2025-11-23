@@ -207,7 +207,7 @@ const SubjectListPage = () => {
                 className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky"
                 onClick={() => handleEditSubject(item)}
               >
-                <Image src="/edit.png" alt="" width={16} height={16} />
+                <Image src="/update.png" alt="" width={16} height={16} />
               </button>
               <button
                 className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple"

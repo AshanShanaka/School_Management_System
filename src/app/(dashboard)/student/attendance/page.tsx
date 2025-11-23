@@ -1,332 +1,370 @@
-import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import prisma from "@/lib/prisma";
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import AttendanceCalendar from "@/components/AttendanceCalendar";
 
-const StudentAttendancePage = async ({
-  searchParams,
-}: {
-  searchParams: { date?: string; period?: string };
-}) => {
-  const user = await getCurrentUser();
-  const role = user?.role;
-  const userId = user?.id;
+type Period = "today" | "week" | "month" | "year";
 
-  if (role !== "student") {
-    redirect("/");
-  }
+interface AttendanceRecord {
+  id: number;
+  date: string;
+  status: string;
+  notes: string | null;
+  teacher: {
+    name: string;
+    surname: string;
+  };
+}
 
-  // Get student info
-  const student = await prisma.student.findUnique({
-    where: { id: user?.id },
-    include: {
-      class: {
-        include: {
-          grade: true,
-        },
-      },
-    },
-  });
+interface StudentInfo {
+  name: string;
+  surname: string;
+  img: string | null;
+  class: {
+    id: number;
+    name: string;
+    grade: {
+      level: number;
+    };
+  };
+}
 
-  if (!student) {
-    return <div>Student not found</div>;
-  }
+export default function StudentAttendancePage() {
+  const [student, setStudent] = useState<StudentInfo | null>(null);
+  const [period, setPeriod] = useState<Period>("month");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
+  const [attendancePercentage, setAttendancePercentage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"summary" | "calendar">("summary");
 
-  const selectedDate =
-    searchParams.date || new Date().toISOString().split("T")[0];
-  const selectedPeriod = searchParams.period || "daily";
+  useEffect(() => {
+    loadAttendance();
+  }, [period]);
 
-  // Calculate date ranges
-  const today = new Date(selectedDate);
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const loadAttendance = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/daily-attendance/student?period=${period}`);
+      const data = await res.json();
 
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+      if (data.success) {
+        setStudent(data.student);
+        setRecords(data.records);
+        setStats(data.stats);
+        setAttendancePercentage(data.attendancePercentage || 0);
+      } else {
+        console.error("Failed to load attendance:", data.error);
+      }
+    } catch (error) {
+      console.error("Error loading attendance:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "PRESENT":
+        return "text-green-600 bg-green-50";
+      case "LATE":
+        return "text-yellow-600 bg-yellow-50";
+      case "ABSENT":
+        return "text-red-600 bg-red-50";
+      default:
+        return "text-gray-600 bg-gray-50";
+    }
+  };
 
-  // Get attendance data based on selected period
-  let startDate = today;
-  let endDate = tomorrow;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "PRESENT":
+        return "✓";
+      case "LATE":
+        return "⏰";
+      case "ABSENT":
+        return "✗";
+      default:
+        return "?";
+    }
+  };
 
-  switch (selectedPeriod) {
-    case "weekly":
-      startDate = weekStart;
-      endDate = weekEnd;
-      break;
-    case "monthly":
-      startDate = monthStart;
-      endDate = monthEnd;
-      break;
-    default:
-      startDate = today;
-      endDate = tomorrow;
-  }
-
-  // Get attendance records for the period
-  const attendanceRecords = await prisma.attendance.findMany({
-    where: {
-      studentId: user?.id,
-      date: {
-        gte: startDate,
-        lte: endDate,
-      },
-    },
-    include: {
-      lesson: {
-        include: {
-          subject: true,
-          teacher: true,
-        },
-      },
-    },
-    orderBy: {
-      date: "desc",
-    },
-  });
-
-  // Calculate statistics
-  const totalRecords = attendanceRecords.length;
-  const presentCount = attendanceRecords.filter((a) => a.present).length;
-  const absentCount = totalRecords - presentCount;
-  const attendanceRate =
-    totalRecords > 0 ? ((presentCount / totalRecords) * 100).toFixed(1) : "0";
-
-  // Get monthly statistics for the chart
-  const monthlyAttendance = await prisma.attendance.findMany({
-    where: {
-      studentId: user?.id,
-      date: {
-        gte: monthStart,
-        lte: monthEnd,
-      },
-    },
-  });
-
-  const monthlyPresent = monthlyAttendance.filter((a) => a.present).length;
-  const monthlyTotal = monthlyAttendance.length;
-  const monthlyRate =
-    monthlyTotal > 0 ? ((monthlyPresent / monthlyTotal) * 100).toFixed(1) : "0";
-
-  return (
-    <div className="p-4">
-      <div className="bg-white p-6 rounded-md">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">My Attendance</h1>
-            <p className="text-gray-500 mt-1">
-              {student.name} {student.surname} - Class{" "}
-              {student.class.name}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">
-              Viewing:{" "}
-              {selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}{" "}
-              | {new Date(selectedDate).toLocaleDateString()}
-            </p>
-            <div className="mt-2 space-x-2">
-              <Link
-                href={`/student/attendance?date=${selectedDate}&period=daily`}
-                className={`px-3 py-1 rounded text-xs ${
-                  selectedPeriod === "daily"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                Daily
-              </Link>
-              <Link
-                href={`/student/attendance?date=${selectedDate}&period=weekly`}
-                className={`px-3 py-1 rounded text-xs ${
-                  selectedPeriod === "weekly"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                Weekly
-              </Link>
-              <Link
-                href={`/student/attendance?date=${selectedDate}&period=monthly`}
-                className={`px-3 py-1 rounded text-xs ${
-                  selectedPeriod === "monthly"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                Monthly
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-50 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {attendanceRate}%
-            </div>
-            <div className="text-sm text-gray-600">
-              {selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}{" "}
-              Rate
-            </div>
-          </div>
-          <div className="bg-green-50 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {presentCount}
-            </div>
-            <div className="text-sm text-gray-600">Present</div>
-          </div>
-          <div className="bg-red-50 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-            <div className="text-sm text-gray-600">Absent</div>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {monthlyRate}%
-            </div>
-            <div className="text-sm text-gray-600">Monthly Rate</div>
-          </div>
-        </div>
-
-        {/* Period Header */}
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">
-            Attendance Records -{" "}
-            {selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}
-          </h2>
-          <p className="text-gray-500">
-            {selectedPeriod === "daily"
-              ? new Date(selectedDate).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : selectedPeriod === "weekly"
-              ? `Week of ${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`
-              : `${monthStart.toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}`}
-          </p>
-        </div>
-
-        {/* Attendance Records Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left">Date & Time</th>
-                <th className="px-4 py-3 text-left">Subject</th>
-                <th className="px-4 py-3 text-left">Teacher</th>
-                <th className="px-4 py-3 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceRecords.length > 0 ? (
-                attendanceRecords.map((attendance) => (
-                  <tr key={attendance.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div>
-                        <div className="font-medium">
-                          {new Date(attendance.date).toLocaleDateString(
-                            "en-US",
-                            {
-                              weekday: "short",
-                              month: "short",
-                              day: "numeric",
-                            }
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(attendance.date).toLocaleTimeString(
-                            "en-US",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium">
-                        {attendance.lesson?.subject?.name || "N/A"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm">
-                        {attendance.lesson?.teacher
-                          ? `${attendance.lesson.teacher.name} ${attendance.lesson.teacher.surname}`
-                          : "N/A"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          attendance.present
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full mr-2 ${
-                            attendance.present ? "bg-green-500" : "bg-red-500"
-                          }`}
-                        />
-                        {attendance.present ? "Present" : "Absent"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-8 text-center text-gray-500"
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <Image
-                        src="/attendance.png"
-                        alt="No data"
-                        width={64}
-                        height={64}
-                        className="opacity-50"
-                      />
-                      <p>No attendance records found for this period.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-6 flex gap-4">
-          <Link
-            href="/student/timetable"
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            View My Timetable
-          </Link>
-          <Link
-            href="/student"
-            className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
-          >
-            Back to Dashboard
-          </Link>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading attendance...</p>
         </div>
       </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <div className="p-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <p className="text-yellow-800">Unable to load student information.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header - Report Style */}
+      <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden border-4 border-white shadow-xl">
+                {student.img ? (
+                  <Image
+                    src={student.img}
+                    alt={student.name}
+                    width={80}
+                    height={80}
+                    className="rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold">
+                    {student.name.charAt(0)}
+                    {student.surname.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold mb-1">
+                  📊 Attendance Report
+                </h1>
+                <p className="text-blue-100">
+                  {student.name} {student.surname} • {student.class.name} - Grade {student.class.grade.level}
+                </p>
+              </div>
+            </div>
+            <div className="text-right bg-white/20 backdrop-blur-sm rounded-xl p-6 border-2 border-white/30">
+              <div className="text-6xl font-bold mb-1">{attendancePercentage}%</div>
+              <div className="text-blue-100 text-sm font-medium">Overall Rate</div>
+              <div className="mt-2">
+                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  attendancePercentage >= 90 ? 'bg-green-500' : 
+                  attendancePercentage >= 75 ? 'bg-blue-500' : 
+                  'bg-orange-500'
+                }`}>
+                  {attendancePercentage >= 90 ? '⭐ Excellent' : attendancePercentage >= 75 ? '✓ Good' : '⚠ Needs Improvement'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-3 border-t border-gray-200">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600 font-medium">📅 Report Period: {period.toUpperCase()}</span>
+            <span className="text-gray-600 font-medium">📋 Generated: {new Date().toLocaleDateString('en-GB')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* View Mode Toggle */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setViewMode("summary")}
+          className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            viewMode === "summary"
+              ? "bg-blue-600 text-white shadow-lg"
+              : "bg-white text-gray-700 hover:bg-gray-50 shadow"
+          }`}
+        >
+          📊 Summary View
+        </button>
+        <button
+          onClick={() => setViewMode("calendar")}
+          className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            viewMode === "calendar"
+              ? "bg-blue-600 text-white shadow-lg"
+              : "bg-white text-gray-700 hover:bg-gray-50 shadow"
+          }`}
+        >
+          📅 Calendar View
+        </button>
+      </div>
+
+      {viewMode === "calendar" ? (
+        <>
+          {/* Calendar Week View */}
+          <AttendanceCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} />
+
+          {/* Selected Date Attendance */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
+              Attendance for {new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+            </h3>
+            {records.find(r => r.date.split("T")[0] === selectedDate) ? (
+              <div className="space-y-4">
+                {(() => {
+                  const record = records.find(r => r.date.split("T")[0] === selectedDate);
+                  if (!record) return null;
+                  return (
+                    <div className="p-6 border-2 border-gray-200 rounded-lg">
+                      <div className="flex items-center gap-4 mb-3">
+                        <span
+                          className={`px-6 py-3 rounded-full font-semibold text-lg ${getStatusColor(
+                            record.status
+                          )}`}
+                        >
+                          {getStatusIcon(record.status)} {record.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        Marked by: {record.teacher.name} {record.teacher.surname}
+                      </div>
+                      {record.notes && (
+                        <div className="mt-3 text-sm text-gray-700 bg-blue-50 p-4 rounded border-l-4 border-blue-400">
+                          <span className="font-medium">Note:</span> {record.notes}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="p-12 text-center bg-gray-50 rounded-lg">
+                <div className="text-6xl mb-4">📋</div>
+                <p className="text-gray-500 text-lg">No attendance record for this date.</p>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Period Filter */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex gap-2">
+              {(["today", "week", "month", "year"] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                    period === p
+                      ? "bg-blue-600 text-white shadow-lg scale-105"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Stats - Report Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-lg border-2 border-blue-200 transform hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-blue-700 font-semibold mb-2">Total Days</div>
+                  <div className="text-4xl font-bold text-blue-900">{stats.total}</div>
+                  <div className="text-xs text-blue-600 mt-1">School days tracked</div>
+                </div>
+                <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-3xl">📅</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl shadow-lg border-2 border-green-200 transform hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-green-700 font-semibold mb-2">Present</div>
+                  <div className="text-4xl font-bold text-green-900">{stats.present}</div>
+                  <div className="text-xs text-green-600 mt-1">{stats.total > 0 ? `${Math.round((stats.present/stats.total)*100)}% attended` : 'N/A'}</div>
+                </div>
+                <div className="w-14 h-14 bg-green-600 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-3xl">✓</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-xl shadow-lg border-2 border-yellow-200 transform hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-yellow-700 font-semibold mb-2">Late</div>
+                  <div className="text-4xl font-bold text-yellow-900">{stats.late}</div>
+                  <div className="text-xs text-yellow-600 mt-1">{stats.total > 0 ? `${Math.round((stats.late/stats.total)*100)}% late arrivals` : 'N/A'}</div>
+                </div>
+                <div className="w-14 h-14 bg-yellow-600 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-3xl">⏰</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-xl shadow-lg border-2 border-red-200 transform hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-red-700 font-semibold mb-2">Absent</div>
+                  <div className="text-4xl font-bold text-red-900">{stats.absent}</div>
+                  <div className="text-xs text-red-600 mt-1">{stats.total > 0 ? `${Math.round((stats.absent/stats.total)*100)}% missed` : 'N/A'}</div>
+                </div>
+                <div className="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-3xl">✗</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Attendance Records - Report Table Style */}
+          <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-300">
+              <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                <span className="text-2xl">📋</span>
+                Attendance History Report
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">Detailed record of daily attendance</p>
+            </div>
+
+            {records.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="text-6xl mb-4">📋</div>
+                <p className="text-gray-500 text-lg">No attendance records found for this period.</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {records.map((record) => (
+                  <div key={record.id} className="p-5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span
+                            className={`px-4 py-2 rounded-full font-semibold text-sm ${getStatusColor(
+                              record.status
+                            )}`}
+                          >
+                            {getStatusIcon(record.status)} {record.status}
+                          </span>
+                          <div className="font-medium text-gray-800 text-lg">
+                            {new Date(record.date).toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600 ml-1">
+                          Marked by: {record.teacher.name} {record.teacher.surname}
+                        </div>
+                        {record.notes && (
+                          <div className="mt-2 text-sm text-gray-700 bg-gray-50 p-3 rounded italic border-l-4 border-blue-300">
+                            <span className="font-medium">Note:</span> {record.notes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
-};
-
-export default StudentAttendancePage;
+}

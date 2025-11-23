@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ReportCardDemo from "@/components/ReportCardDemo";
+import StudentReportCardList from "@/components/StudentReportCardList";
 
 const StudentReportCardPage = async () => {
   const user = await getCurrentUser();
@@ -9,7 +9,11 @@ const StudentReportCardPage = async () => {
     redirect("/login");
   }
 
-  return <ReportCardDemo userRole="student" />;
+  return (
+    <div className="flex-1 p-4">
+      <StudentReportCardList />
+    </div>
+  );
 };
 
 export default StudentReportCardPage;

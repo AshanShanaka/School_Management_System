@@ -222,7 +222,7 @@ export async function POST(
     // Start transaction to update/create marks
     const results = await prisma.$transaction(async (tx) => {
       const resultPromises = marks.map(async (mark: any) => {
-        const { studentId, marksObtained } = mark;
+        const { studentId, marksObtained, isAbsent } = mark;
 
         if (!studentId) {
           throw new Error("Student ID is required for each mark entry");
@@ -230,6 +230,9 @@ export async function POST(
 
         const examSubjectId = await getExamSubjectId(tx, examId, parseInt(subjectId));
 
+        // For absent students, set marks to null/0 and add absent flag
+        const finalMarks = isAbsent ? 0 : (marksObtained !== null && marksObtained !== undefined ? parseInt(marksObtained) : 0);
+        
         // Upsert exam result
         return tx.examResult.upsert({
           where: {
@@ -239,16 +242,16 @@ export async function POST(
             },
           },
           update: {
-            marks: marksObtained !== null && marksObtained !== undefined ? parseInt(marksObtained) : 0,
-            grade: null, // Will be calculated later
+            marks: finalMarks,
+            grade: isAbsent ? "AB" : null, // "AB" for absent, null to be calculated later
             updatedAt: new Date(),
           },
           create: {
             studentId,
             examSubjectId,
             examId,
-            marks: marksObtained !== null && marksObtained !== undefined ? parseInt(marksObtained) : 0,
-            grade: null,
+            marks: finalMarks,
+            grade: isAbsent ? "AB" : null,
           },
         });
       });
@@ -300,6 +303,108 @@ export async function POST(
   }
 }
 
+// DELETE /api/marks-entry/[examId] - Delete marks for a subject
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { examId: string } }
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (user.role !== "teacher" && user.role !== "admin") {
+      return NextResponse.json({ error: "Only teachers and admins can delete marks" }, { status: 403 });
+    }
+
+    const examId = parseInt(params.examId);
+    if (isNaN(examId)) {
+      return NextResponse.json({ error: "Invalid exam ID" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { subjectId } = body;
+
+    if (!subjectId) {
+      return NextResponse.json(
+        { error: "Subject ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify teacher is assigned to this subject (unless admin)
+    if (user.role === "teacher") {
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: user.id },
+        include: {
+          subjects: {
+            where: {
+              id: parseInt(subjectId),
+            },
+          },
+        },
+      });
+
+      if (!teacher || teacher.subjects.length === 0) {
+        return NextResponse.json(
+          { error: "You are not assigned to teach this subject" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Delete all exam results for this subject
+    await prisma.$transaction(async (tx) => {
+      const examSubjectId = await getExamSubjectId(tx, examId, parseInt(subjectId));
+
+      // Delete all exam results for this subject
+      await tx.examResult.deleteMany({
+        where: {
+          examSubjectId,
+          examId,
+        },
+      });
+
+      // Mark subject as not completed
+      await tx.examSubject.updateMany({
+        where: {
+          examId,
+          subjectId: parseInt(subjectId),
+        },
+        data: {
+          marksEntered: false,
+          marksEnteredAt: null,
+          marksEnteredBy: null,
+        },
+      });
+    });
+
+    // Check if exam status should be reverted
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+    });
+
+    if (exam && exam.status === "CLASS_REVIEW") {
+      await prisma.exam.update({
+        where: { id: examId },
+        data: { status: "PUBLISHED" },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Marks deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting marks:", error);
+    return NextResponse.json(
+      { error: "Failed to delete marks" },
+      { status: 500 }
+    );
+  }
+}
+
 // Helper function to get examSubjectId
 async function getExamSubjectId(tx: any, examId: number, subjectId: number) {
   const examSubject = await tx.examSubject.findFirst({
@@ -313,3 +418,4 @@ async function getExamSubjectId(tx: any, examId: number, subjectId: number) {
 
   return examSubject.id;
 }
+

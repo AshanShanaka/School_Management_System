@@ -56,6 +56,11 @@ export const studentSchema = z.object({
     .string()
     .min(3, { message: "Username must be at least 3 characters long!" })
     .max(20, { message: "Username must be at most 20 characters long!" }),
+  indexNumber: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => (val === "" ? undefined : val)),
   password: z
     .string()
     .min(8, { message: "Password must be at least 8 characters long!" })

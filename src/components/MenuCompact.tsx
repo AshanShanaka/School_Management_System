@@ -1,7 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
-import AIPredictionIcon from "@/components/icons/AIPredictionIcon";
 
 // Simplified and grouped menu items for professional admin panel
 const adminMenuItems = [
@@ -26,21 +25,27 @@ const adminMenuItems = [
       { icon: "/subject.png", label: "Subjects", href: "/list/subjects", color: "cyan" },
       { icon: "/calendar.png", label: "Timetables", href: "/admin/timetable", color: "emerald" },
       { icon: "/exam.png", label: "Exams", href: "/list/exams", color: "red" },
+      { icon: "/result.png", label: "Exam Results", href: "/list/exam-results", color: "amber" },
+      { icon: "/attendance.png", label: "Attendance", href: "/admin/attendance", color: "green" },
     ],
   },
   {
-    title: "OPERATIONS",
+    title: "ANALYTICS",
     items: [
-      { icon: "/attendance.png", label: "Attendance", href: "/admin/attendance", color: "pink" },
-      { icon: "/result.png", label: "Results", href: "/list/results", color: "teal" },
-      { icon: "/message.png", label: "Messages", href: "/messages", color: "violet" },
+      { icon: "/result.png", label: "School Analytics", href: "/admin/analytics", color: "indigo" },
+    ],
+  },
+  {
+    title: "RESULTS",
+    items: [
+      { icon: "/result.png", label: "Previous Marks Records", href: "/admin/previous-marks-records", color: "purple" },
+      { icon: "/update.png", label: "Import Historical Marks", href: "/admin/historical-marks-import", color: "amber" },
     ],
   },
   {
     title: "TOOLS",
     items: [
       { icon: "/upload.png", label: "CSV Import", href: "/admin/import", color: "blue" },
-      { icon: "/ai-prediction.svg", label: "AI Predictions", href: "/admin/predictions", color: "purple" },
       { icon: "/calendar.png", label: "Events", href: "/admin/events", color: "green" },
       { icon: "/announcement.png", label: "Announcements", href: "/list/announcements", color: "orange" },
     ],
@@ -66,10 +71,10 @@ const teacherMenuItems = [
   {
     title: "ACTIVITIES",
     items: [
-      { icon: "/attendance.png", label: "Take Attendance", href: "/teacher/attendance/timetable", color: "green" },
       { icon: "/update.png", label: "Marks Entry", href: "/teacher/marks-entry", color: "indigo" },
-      { icon: "/result.png", label: "Class Reports", href: "/teacher/class-reports", color: "purple" },
-      { icon: "/result.png", label: "Report Cards", href: "/teacher/report-card", color: "blue" },
+      { icon: "/result.png", label: "Report Cards", href: "/teacher/generated-reports", color: "purple" },
+      { icon: "/attendance.png", label: "Attendance", href: "/teacher/attendance", color: "green" },
+      { icon: "/calendar.png", label: "Parent Meetings", href: "/class-teacher/meetings", color: "violet" },
     ],
   },
   {
@@ -78,9 +83,15 @@ const teacherMenuItems = [
       { icon: "/calendar.png", label: "Timetable", href: "/teacher/school-timetable", color: "emerald" },
       { icon: "/exam.png", label: "Exams", href: "/list/exams", color: "red" },
       { icon: "/assignment.png", label: "Assignments", href: "/list/assignments", color: "amber" },
-      { icon: "/result.png", label: "Results", href: "/list/results", color: "teal" },
       { icon: "/message.png", label: "Messages", href: "/messages", color: "pink" },
-      { icon: "/ai-prediction.svg", label: "AI Predictions", href: "/teacher/predictions", color: "purple" },
+    ],
+  },
+  {
+    title: "O/L PREDICTIONS",
+    items: [
+      { icon: "/result.png", label: "Class O/L Analytics", href: "/class-teacher/ol-analytics", color: "indigo" },
+      { icon: "/update.png", label: "Import Historical Marks", href: "/teacher/historical-marks-import", color: "amber" },
+      { icon: "/view.png", label: "View Historical Marks", href: "/teacher/view-historical-marks", color: "purple" },
     ],
   },
 ];
@@ -95,10 +106,10 @@ const studentMenuItems = [
   {
     title: "MY LEARNING",
     items: [
-      { icon: "/attendance.png", label: "My Attendance", href: "/student/attendance", color: "green" },
       { icon: "/assignment.png", label: "Assignments", href: "/list/assignments", color: "amber" },
-      { icon: "/result.png", label: "Results", href: "/list/results", color: "teal" },
+      { icon: "/result.png", label: "My Results", href: "/student/my-results", color: "teal" },
       { icon: "/result.png", label: "Report Card", href: "/student/report-card", color: "blue" },
+      { icon: "/attendance.png", label: "My Attendance", href: "/student/attendance", color: "green" },
     ],
   },
   {
@@ -108,6 +119,13 @@ const studentMenuItems = [
       { icon: "/exam.png", label: "Exams", href: "/list/exams", color: "red" },
       { icon: "/calendar.png", label: "Events", href: "/list/events", color: "purple" },
       { icon: "/message.png", label: "Messages", href: "/messages", color: "pink" },
+    ],
+  },
+  {
+    title: "O/L PREDICTION",
+    items: [
+      { icon: "/ai-prediction.svg", label: "Previous Marks (9 & 10)", href: "/student/previous-marks", color: "purple" },
+      { icon: "/result.png", label: "My O/L Prediction", href: "/student/ol-prediction", color: "indigo" },
     ],
   },
 ];
@@ -123,7 +141,6 @@ const parentMenuItems = [
     title: "MY CHILDREN",
     items: [
       { icon: "/student.png", label: "Children", href: "/parent/children", color: "green" },
-      { icon: "/attendance.png", label: "Attendance", href: "/parent/attendance", color: "pink" },
       { icon: "/result.png", label: "Report Cards", href: "/parent/report-card", color: "blue" },
       { icon: "/calendar.png", label: "Meetings", href: "/parent/meetings", color: "purple" },
     ],
@@ -134,9 +151,15 @@ const parentMenuItems = [
       { icon: "/calendar.png", label: "Timetable", href: "/parent/timetable", color: "emerald" },
       { icon: "/exam.png", label: "Exams", href: "/list/exams", color: "red" },
       { icon: "/assignment.png", label: "Assignments", href: "/list/assignments", color: "amber" },
-      { icon: "/result.png", label: "Results", href: "/list/results", color: "teal" },
+      { icon: "/result.png", label: "Children Results", href: "/student/my-results", color: "teal" },
       { icon: "/message.png", label: "Messages", href: "/messages", color: "violet" },
       { icon: "/calendar.png", label: "Events", href: "/list/events", color: "orange" },
+    ],
+  },
+  {
+    title: "O/L PREDICTION",
+    items: [
+      { icon: "/result.png", label: "Child O/L Prediction", href: "/parent/ol-prediction", color: "indigo" },
     ],
   },
 ];
@@ -186,17 +209,13 @@ const MenuCompact = async () => {
               >
                 {/* Simple Icon */}
                 <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                  {item.label === "AI Predictions" ? (
-                    <AIPredictionIcon size={20} className="opacity-70 group-hover:opacity-100 transition-opacity duration-150" />
-                  ) : (
-                    <Image
-                      src={item.icon}
-                      alt={item.label}
-                      width={20}
-                      height={20}
-                      className="opacity-70 group-hover:opacity-100 transition-opacity duration-150"
-                    />
-                  )}
+                  <Image
+                    src={item.icon}
+                    alt={item.label}
+                    width={20}
+                    height={20}
+                    className="opacity-70 group-hover:opacity-100 transition-opacity duration-150"
+                  />
                 </div>
 
                 {/* Clean Label */}

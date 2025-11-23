@@ -71,7 +71,17 @@ export async function GET(
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
 
-    return NextResponse.json(exam);
+    // Get total students count for this grade
+    const totalStudents = await prisma.student.count({
+      where: {
+        gradeId: exam.gradeId
+      }
+    });
+
+    return NextResponse.json({
+      ...exam,
+      totalStudents
+    });
   } catch (error) {
     console.error("Error fetching exam:", error);
     return NextResponse.json(
